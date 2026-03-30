@@ -1,0 +1,8 @@
+{
+  "name": "mbtamuli/bookmarks",
+  "description": "Personal bookmark manager",
+  "type": "project",
+  "require": {
+    "php": ">=8.1"
+  }
+}

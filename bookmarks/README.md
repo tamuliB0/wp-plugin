@@ -35,8 +35,16 @@ you have not created `public/index.php` yet. That is your first task.
 - Write commit messages that start with a verb and describe what changed.
   Good: "Show bookmarks from database on homepage".
   Bad: "Updated index.php".
-- Open a PR when a milestone is done. You can start the next milestone
-  while waiting for review.
+- When a milestone is done, push your branch and open a PR on your fork.
+  Then merge the PR into your own main right away -- do not wait for
+  review. Start the next milestone from main:
+  ```
+  git checkout main
+  git pull origin main
+  git checkout -b project/bookmarks/milestone-2
+  ```
+  Your reviewer will review the merged PR and leave comments. Apply any
+  feedback in your next milestone.
 - This project has no automated tests. Check each item in the "Done
   when" list yourself by trying it in the browser. If it works as
   described, the milestone is complete.

@@ -6,3 +6,7 @@
 
 (What choices did you make about how to build this? File structure,
 database queries, how forms work -- anything you decided yourself)
+
+## Anything you noticed while working?
+
+(Optional. A sentence or two is fine.)

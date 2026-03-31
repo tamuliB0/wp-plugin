@@ -41,10 +41,19 @@ you have not created `public/index.php` yet. That is your first task.
   ```
   git checkout main
   git pull origin main
-  git checkout -b project/bookmarks/milestone-2
+  git checkout -b project/bookmarks/milestone-3
   ```
   Your reviewer will review the merged PR and leave comments. Apply any
   feedback in your next milestone.
+- When new milestones are added to this README, sync your fork with
+  upstream to get the changes:
+  ```
+  git remote add upstream https://github.com/mbtamuli/php-projects.git
+  git fetch upstream
+  git merge upstream/main
+  ```
+  You only need the first command once. After that, `git fetch upstream`
+  and `git merge upstream/main` is enough.
 - This project has no automated tests. Check each item in the "Done
   when" list yourself by trying it in the browser. If it works as
   described, the milestone is complete.
@@ -79,13 +88,49 @@ Build forms to add, edit, and delete bookmarks.
 - After adding, editing, or deleting, the page redirects back to the
   bookmark list
 
-*Milestones 3 and 4 (tags and search) will be added here while you
-work on milestones 1 and 2. The database schema already includes the
-tables for tags -- you will use them later.*
+## Milestone 3: I can organize
+
+Before starting this milestone, read the review comments on your
+milestone 1 and milestone 2 PRs. Fix the HTML nesting bug in index.php
+and add the `target` attribute to bookmark links. Apply the other
+feedback patterns as you build this milestone.
+
+Your add and edit forms have identical validation logic. Before adding
+tag features, extract that shared logic into a function in a new file
+(e.g., `functions.php`) and require it where needed. This way you only
+write validation once.
+
+Then: use the `tags` and `bookmark_tags` tables from schema.sql to let
+Riya organize her bookmarks. Look at the schema to see how the three
+tables relate to each other.
+
+**Done when:**
+- Each bookmark shows its tags (if any) on the homepage
+- The add bookmark form lets you assign one or more existing tags
+- The edit bookmark form lets you change a bookmark's tags
+- There is a way to filter bookmarks by a specific tag (e.g., clicking
+  a tag name shows only bookmarks with that tag)
+- Adding a bookmark with a tag that does not exist yet creates the tag
+- Removing all bookmarks from a tag does not delete the tag itself
+
+## Milestone 4: I can find things
+
+Build search and pagination so Riya can find bookmarks when her list
+grows long.
+
+**Done when:**
+- There is a search box on the homepage. Typing a term and submitting
+  shows only bookmarks whose title contains that term
+- Search results still show tags and all the same controls (edit, delete)
+- The homepage shows 10 bookmarks per page with previous/next links
+  (or page numbers). Pagination works with and without an active search
+- There is a way to sort bookmarks by title or by date added (e.g., a
+  dropdown or clickable column headers). The current sort choice persists
+  across pages
 
 ## Stretch goals
 
 If you finish all milestones before the next project is ready:
-- Add pagination (show 10 bookmarks per page with next/previous links)
-- Add sorting (by title or by date added)
 - Add a "favorites" feature (mark bookmarks as favorites, show them first)
+- Add bulk actions (select multiple bookmarks, delete or tag them at once)
+- Add an import feature (paste a list of URLs, create bookmarks from page titles)

@@ -8,10 +8,11 @@ if (!isset($_GET["id"]) || !ctype_digit($_GET["id"])) {
 }
 $id = (int) $_GET["id"];
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $id = (int) $_POST["id"] ?? null;
-    $title = trim($_POST["title"]) ?? "";
-    $url = trim($_POST["url"]) ?? "";
-    $notes = trim($_POST["notes"]) ?? "";
+    $id = (int) ($_POST["id"] ?? null);
+    $title = trim($_POST["title"] ?? "");
+    $url = trim($_POST["url"] ?? "");
+    $notes = trim($_POST["notes"] ?? "");
+    $selectedTag = $_POST["tags"] ?? [];
 
     $errors = validateBookmark($title, $url);
     if (empty($errors)) {
@@ -22,8 +23,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ":notes" => $notes,
             ":id" => $id
         ]);
+        $stmt = $pdo->prepare("DELETE FROM bookmark_tags WHERE bookmark_id = ?");
+        $stmt->execute([$id]);
+        $Tagstmt = $pdo->prepare("INSERT INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?)");
+        foreach ($selectedTag as $tagId) {
+            $Tagstmt->execute([$id, $tagId]);
+        }
         header("Location: /index.php");
-        exit();
+        exit(); 
+    } else {
+        $currentTags = $selectedTag;
     }
 }
 $stmt = $pdo->prepare("SELECT title, url, notes FROM bookmarks WHERE id = :id");
@@ -33,6 +42,12 @@ if ($bookmark === false) {
     header("Location: /index.php");
     exit();
 }
+$stmt = $pdo->query("SELECT * FROM tags");
+$tags = $stmt->fetchAll();
+
+$stmt = $pdo->prepare("SELECT tag_id FROM bookmark_tags WHERE bookmark_id = ?");
+$stmt->execute([$id]);
+$currentTags = array_column($stmt->fetchAll(), "tag_id");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,15 +70,24 @@ if ($bookmark === false) {
 
         <label for="title">Title:</label>
         <input type="text" name="title" id="title" 
-        value="<?= isset($title) ? htmlspecialchars($title) : htmlspecialchars($bookmark["title"]) ?>" required>
+        value="<?= htmlspecialchars($title ?? $bookmark["title"]) ?>" required>
 
         <label for="url">Url:</label>
         <input type="text" name="url" id="url"
-        value="<?= isset($url) ? htmlspecialchars($url) : htmlspecialchars($bookmark["url"])  ?>" required>
+        value="<?= htmlspecialchars($url ?? $bookmark["url"])  ?>" required>
 
         <label for="notes">Notes:</label>
         <input type="text" name="notes" id="notes"
-        value="<?= isset($notes) ? htmlspecialchars($notes) : htmlspecialchars($bookmark["notes"]) ?>">
+        value="<?= htmlspecialchars($notes ?? $bookmark["notes"]) ?>">
+
+        <p>Select Tag:</p>
+        <?php foreach ($tags as $tag) : ?>
+            <label>
+                <input type="checkbox" name="tags[]" 
+                value="<?= $tag["id"] ?>" <?= in_array($tag["id"], $currentTags) ? "checked" : ""?>>
+                <?=htmlspecialchars($tag["name"]) ?>
+            </label>
+        <?php endforeach; ?>
         <input type="submit" value="Save">
     </form>
 </body>

@@ -1,6 +1,7 @@
 <?php 
 require __DIR__ . "/db.php";
 require __DIR__ . "/functions.php";
+
 $errors = [];
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $title = trim($_POST["title"] ?? "");
@@ -10,66 +11,89 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $errors = validateBookmark($title, $url);
 
     if (empty($errors)) {
-        $Insertstmt = $pdo->prepare("INSERT INTO bookmarks (title, url, notes) VALUES (:title, :url, :notes)");
-        $Insertstmt->execute([
+        // insert new bookmark 
+        $insertBookmarkStmt = $pdo->prepare("INSERT INTO bookmarks (title, url, notes) VALUES (:title, :url, :notes)");
+        $insertBookmarkStmt->execute([
             ":title" => $title,
             ":url" => $url,
             ":notes" => $notes
         ]);
         $bookmarkId = $pdo->lastInsertId();
-        $selectedTag = $_POST["tags"] ?? [];
+        $selectedTags = $_POST["tags"] ?? [];
         $newTag = trim($_POST["new_tag"] ?? "");
 
+        // create new tag if provided and add to selected tags
         if ($newTag !== "") {
-            $stmt  = $pdo->prepare("SELECT id FROM tags WHERE name = ?");
-            $stmt->execute([$newTag]);
-            $existingTag = $stmt->fetch();
-
-            if ($existingTag === false) {
-                $stmt = $pdo->prepare("INSERT INTO tags (name) VALUES (?)");
-                $stmt->execute([$newTag]);
-                $newTagId = $pdo->lastInsertId();                
-            } else {
-                $newTagId = $existingTag["id"];
-            }
-            $selectedTag[] = $newTagId;
+            $selectedTags[] = findOrCreateTag($pdo, $newTag);
         }
-        $Tagstmt = $pdo->prepare("INSERT INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?)");
-        foreach ($selectedTag as $tagId) {
-            $Tagstmt->execute([$bookmarkId, $tagId]);
-        }
+        // link tags to bookmarks
+        saveBookmarkTags($pdo, $bookmarkId, $selectedTags);
         header("Location: /index.php");
         exit();
     }
 }
-$tagFilter = $_GET["tags"] ?? "";
-if ($tagFilter !== "") {
-    $stmt = $pdo->prepare("SELECT bookmarks.*, 
-        GROUP_CONCAT(tags.name ORDER BY tags.name SEPARATOR ', ') AS tag_name
-        FROM bookmarks
-        LEFT JOIN bookmark_tags
-        ON bookmarks.id = bookmark_tags.bookmark_id
-        LEFT JOIN tags
-        ON bookmark_tags.tag_id = tags.id
-        WHERE tags.name = ?
-        GROUP BY bookmarks.id 
-        ORDER BY bookmarks.created_at DESC");
-    $stmt->execute([$tagFilter]);
-} else {
-    $stmt = $pdo->query("SELECT bookmarks.*, 
-        GROUP_CONCAT(tags.name ORDER BY tags.name SEPARATOR ', ') AS tag_name
-        FROM bookmarks
-        LEFT JOIN bookmark_tags
-        ON bookmarks.id = bookmark_tags.bookmark_id
-        LEFT JOIN tags
-        ON bookmark_tags.tag_id = tags.id
-        GROUP BY bookmarks.id 
-        ORDER BY bookmarks.created_at DESC");
-}
-$bookmarks = $stmt->fetchAll();
+// sorting
+$allowedSort = [
+    "title" => "bookmarks.title",
+    "date"=> "bookmarks.created_at" 
+];
+$sortKey = trim($_GET["sort"] ?? "date");
+$sortColumn = $allowedSort[$sortKey] ?? $allowedSort["date"];
+$dir = trim($_GET["dir"] ?? "");
+$dir = in_array($dir, ["desc", "asc"]) ? $dir : "desc";
+//pagination 
+$page = max(1, (int) ($_GET["page"] ?? 1));
+$perPage = max(1, min(100, (int) ($_GET['per_page'] ?? 10)));
+$offset = ($page - 1) * $perPage;
+//filters
+$search = trim($_GET["search"] ?? "");  
+$tagFilter = trim($_GET["tag"] ?? "");
 
-$stmt= $pdo->query("SELECT * FROM tags");
-$tags = $stmt->fetchAll();
+$conditions = [];
+$params = [];
+if ($tagFilter !== "") {
+    $conditions[] = "tags.name = :tag";
+    $params[":tag"] = $tagFilter;
+}
+if ($search !== "") {
+    $conditions[] = "bookmarks.title LIKE :search";
+    $params[":search"] = "%$search%";
+}
+//base query
+$sql = " FROM bookmarks
+        LEFT JOIN bookmark_tags
+        ON bookmarks.id = bookmark_tags.bookmark_id
+        LEFT JOIN tags
+        ON bookmark_tags.tag_id = tags.id ";
+
+$whereClause = "";
+if (!empty($conditions)) {
+    $whereClause = " WHERE " . implode(" AND ", $conditions);
+}
+// query to count total items for pagination 
+$sqlCount = "SELECT COUNT(DISTINCT bookmarks.id) AS bookmark_count " . $sql . $whereClause;
+$countStmt = $pdo->prepare($sqlCount);
+$countStmt->execute($params);
+$total = $countStmt->fetch()["bookmark_count"];
+
+$totalPages = (int) ceil($total / $perPage);
+//query to display paginated bookmarks
+$mainSql = "SELECT bookmarks.*, 
+        GROUP_CONCAT(tags.name ORDER BY tags.name SEPARATOR ', ') AS tag_names " . $sql . $whereClause . 
+        " GROUP BY bookmarks.id
+          ORDER BY $sortColumn $dir
+          LIMIT :limit OFFSET :offset";
+$listStmt = $pdo->prepare($mainSql);
+foreach ($params as $key => $value) {
+    $listStmt->bindValue($key, $value, PDO::PARAM_STR);
+}
+$listStmt->bindValue(":limit", $perPage, PDO::PARAM_INT);
+$listStmt->bindValue(":offset", $offset, PDO::PARAM_INT);
+$listStmt->execute();
+$bookmarks = $listStmt->fetchAll();
+//query to fetch all tags 
+$tagsStmt = $pdo->query("SELECT * FROM tags");
+$tags = $tagsStmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -105,8 +129,7 @@ $tags = $stmt->fetchAll();
             </label>
         <?php endforeach; ?>
         <input type="text" name="new_tag" placeholder="enter new tag">
-        <input type="submit" value="Add Bookmark">
-        
+        <input type="submit" value="Add Bookmark"> 
     </form>
     <?php if (!empty($errors)) : ?>
         <ul>
@@ -115,32 +138,52 @@ $tags = $stmt->fetchAll();
             <?php endforeach; ?>
         </ul>
     <?php endif; ?>
-    <h3>Bookmarks</h3>
-
+    <h2>Bookmarks</h2>
     <p><strong>Filter by tag:</strong></p>
-    <a href="index.php">All Tags</a>
+    <div style="display:flex; justify-content:space-between">
+        <div style="display:flex; gap:5px">
+            <a href="index.php">All Tags</a>
+            <?php foreach ($tags as $tag) : ?>
+                <a href="index.php?tag=<?= htmlspecialchars($tag["name"]) ?>"><?= htmlspecialchars($tag["name"]) ?></a>
+            <?php endforeach; ?>
+        </div>
+        <form method="GET">
+            <input type="hidden" name="tag" value="<?= htmlspecialchars($tagFilter)?>">
+            <input type="text" name="search" value="<?= htmlspecialchars($search)?>"placeholder="find bookmark">
+            <input type="submit" value="Search">
+        <label>
+            Sort by:
+            <select name="sort">
+                <option value="date" <?= $sortKey === "date" ? "selected" : ""?>>Date</option>
+                <option value="title" <?= $sortKey === "title" ? "selected" : ""?>>Title</option>
+            </select>
 
-    <?php foreach ($tags as $tag) : ?>
-        <a href="index.php?tags=<?= htmlspecialchars($tag["name"]) ?>"><?= htmlspecialchars($tag["name"]) ?></a>
-    <?php endforeach; ?>
-
+            <select name="dir">
+                <option value="asc" <?= $dir === "asc" ? "selected" : ""?>>Ascending</option>
+                <option value="desc" <?= $dir === "desc" ? "selected" : ""?>>Descending</option>
+            </select>
+        </label>
+        <input type="submit" value="Sort">
+        </form> 
+    </div>
     <table>
         <thead>
             <tr>
-                <th>Title</th>
-                <th>Url</th>
-                <th>Notes</th>
-                <th>Tags</th>
+                <th>TITLE</th>
+                <th>URL</th>
+                <th>NOTES</th>
+                <th>TAGS</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ($bookmarks as $bookmark) : ?>
                 <tr>
                     <td><?= htmlspecialchars($bookmark["title"]?? "") ?></td>
-                    <td><a href="<?= htmlspecialchars($bookmark["url"]) ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($bookmark["url"])?></a>
+                    <td>
+                        <a href="<?= htmlspecialchars($bookmark["url"]) ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($bookmark["url"])?></a>
                     </td>
                     <td><?= htmlspecialchars($bookmark["notes"]?? "") ?></td>
-                    <td><?= htmlspecialchars($bookmark["tag_name"]?? "") ?></td>
+                    <td><?= htmlspecialchars($bookmark["tag_names"]?? "") ?></td>
                     <td><a href="edit.php?id=<?= htmlspecialchars($bookmark["id"]) ?>">Edit</a></td>
                     <td><form method="POST" action="delete.php">
                             <input type="hidden" name="id" value="<?= htmlspecialchars($bookmark["id"]) ?>">
@@ -151,5 +194,14 @@ $tags = $stmt->fetchAll();
             <?php endforeach; ?>
         </tbody>
     </table>
+    <?php if ($totalPages > 1) : ?>
+        <?php if ($page > 1) : ?>
+            <a href="?page=<?=$page - 1?>&search=<?=htmlspecialchars($search)?>&tag=<?=htmlspecialchars($tagFilter)?>&sort=<?=htmlspecialchars($sortKey)?>&dir=<?=htmlspecialchars($dir)?>">Previous</a>
+        <?php endif; ?>
+
+        <?php if ($page < $totalPages) : ?>
+            <a href="?page=<?=$page + 1?>&search=<?=htmlspecialchars($search)?>&tag=<?=htmlspecialchars($tagFilter)?>&sort=<?=htmlspecialchars($sortKey)?>&dir=<?=htmlspecialchars($dir)?>">Next</a>
+        <?php endif; ?>
+    <?php endif;  ?>  
 </body>
 </html>

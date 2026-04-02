@@ -8,46 +8,50 @@ if (!isset($_GET["id"]) || !ctype_digit($_GET["id"])) {
 }
 $id = (int) $_GET["id"];
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $id = (int) ($_POST["id"] ?? null);
+    $postId = ($_POST["id"] ?? null);
+    if ($postId === null || !ctype_digit($postId)) {
+        exit();
+    }
+    $postId = (int) $postId; 
     $title = trim($_POST["title"] ?? "");
     $url = trim($_POST["url"] ?? "");
     $notes = trim($_POST["notes"] ?? "");
-    $selectedTag = $_POST["tags"] ?? [];
+    $selectedTags = $_POST["tags"] ?? [];
+    $newTag = trim($_POST["new_tag"] ?? "");
+
 
     $errors = validateBookmark($title, $url);
     if (empty($errors)) {
-        $stmt = $pdo->prepare("UPDATE bookmarks SET title = :title, url = :url, notes = :notes WHERE id = :id");
-        $stmt->execute([
+        $updateBookmarkStmt = $pdo->prepare("UPDATE bookmarks SET title = :title, url = :url, notes = :notes WHERE id = :id");
+        $updateBookmarkStmt->execute([
             ":title" => $title,
             ":url" => $url,
             ":notes" => $notes,
-            ":id" => $id
+            ":id" => $postId
         ]);
-        $stmt = $pdo->prepare("DELETE FROM bookmark_tags WHERE bookmark_id = ?");
-        $stmt->execute([$id]);
-        $Tagstmt = $pdo->prepare("INSERT INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?)");
-        foreach ($selectedTag as $tagId) {
-            $Tagstmt->execute([$id, $tagId]);
+        if ($newTag !== "") {
+        $selectedTags[] = findOrCreateTag($pdo, $newTag);
         }
+        saveBookmarkTags($pdo, $postId, $selectedTags);
         header("Location: /index.php");
         exit(); 
     } else {
-        $currentTags = $selectedTag;
+        $currentTags = $selectedTags;
     }
 }
-$stmt = $pdo->prepare("SELECT title, url, notes FROM bookmarks WHERE id = :id");
-$stmt->execute([":id" => $id]);
-$bookmark = $stmt->fetch();
+$fetchStmt = $pdo->prepare("SELECT title, url, notes FROM bookmarks WHERE id = :id");
+$fetchStmt->execute([":id" => $id]);
+$bookmark = $fetchStmt->fetch();
 if ($bookmark === false) {
     header("Location: /index.php");
     exit();
 }
-$stmt = $pdo->query("SELECT * FROM tags");
-$tags = $stmt->fetchAll();
+$fetchTagsStmt = $pdo->query("SELECT * FROM tags");
+$tags = $fetchTagsStmt->fetchAll();
 
-$stmt = $pdo->prepare("SELECT tag_id FROM bookmark_tags WHERE bookmark_id = ?");
-$stmt->execute([$id]);
-$currentTags = array_column($stmt->fetchAll(), "tag_id");
+$currentTagStmt = $pdo->prepare("SELECT tag_id FROM bookmark_tags WHERE bookmark_id = :id");
+$currentTagStmt->execute([":id" => $id]);
+$currentTags = array_column($currentTagStmt->fetchAll(), "tag_id");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -66,7 +70,7 @@ $currentTags = array_column($stmt->fetchAll(), "tag_id");
     <?php endif; ?>
     <h2>Edit bookmark</h2>
     <form method="POST">
-        <input type="hidden" name="id" value="<?= htmlspecialchars($id) ?>">
+        <input type="hidden" name="id" value="<?= htmlspecialchars($postId ?? $id) ?>">
 
         <label for="title">Title:</label>
         <input type="text" name="title" id="title" 
@@ -88,6 +92,7 @@ $currentTags = array_column($stmt->fetchAll(), "tag_id");
                 <?=htmlspecialchars($tag["name"]) ?>
             </label>
         <?php endforeach; ?>
+        <input type="text" name="new_tag" placeholder="enter new tag" value="<?= htmlspecialchars($newTag ?? "") ?>">
         <input type="submit" value="Save">
     </form>
 </body>

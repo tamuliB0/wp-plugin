@@ -7,16 +7,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         exit();
     }
     $id = (int) $_POST["id"];
-    $stmt = $pdo->prepare("SELECT title, url, notes FROM bookmarks WHERE id = :id");
-    $stmt->execute([":id" => $id]);
-    $bookmark = $stmt->fetch();
+    $fetchBookmarkStmt = $pdo->prepare("SELECT title, url, notes FROM bookmarks WHERE id = :id");
+    $fetchBookmarkStmt->execute([":id" => $id]);
+    $bookmark = $fetchBookmarkStmt->fetch();
     if ($bookmark === false) {
         header("Location: /index.php");
         exit();
     }
 
-    $stmt = $pdo->prepare("DELETE FROM bookmarks WHERE id = :id");
-    $stmt->execute([":id" => $id]);
+    $deleteStmt = $pdo->prepare("DELETE FROM bookmarks WHERE id = :id");
+    $deleteStmt->execute([":id" => $id]);
 }
 header("Location: /index.php");
 exit();

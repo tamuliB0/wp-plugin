@@ -3,6 +3,7 @@ require __DIR__ . "/db.php";
 require __DIR__ . "/functions.php";
 
 $errors = [];
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $title = trim($_POST["title"] ?? "");
     $url = trim($_POST["url"] ?? "");
@@ -57,7 +58,8 @@ if ($tagFilter !== "") {
 }
 if ($search !== "") {
     $conditions[] = "bookmarks.title LIKE :search";
-    $params[":search"] = "%$search%";
+    $escapedSearch = str_replace(['%', '_'], ['\\%', '\\_'], $search);
+    $params[":search"] = "%$escapedSearch%";
 }
 //base query
 $sql = " FROM bookmarks
@@ -81,7 +83,7 @@ $totalPages = (int) ceil($total / $perPage);
 $mainSql = "SELECT bookmarks.*, 
         GROUP_CONCAT(tags.name ORDER BY tags.name SEPARATOR ', ') AS tag_names " . $sql . $whereClause . 
         " GROUP BY bookmarks.id
-          ORDER BY $sortColumn $dir
+          ORDER BY favourite DESC, $sortColumn $dir
           LIMIT :limit OFFSET :offset";
 $listStmt = $pdo->prepare($mainSql);
 foreach ($params as $key => $value) {
@@ -149,7 +151,7 @@ $tags = $tagsStmt->fetchAll();
         </div>
         <form method="GET">
             <input type="hidden" name="tag" value="<?= htmlspecialchars($tagFilter)?>">
-            <input type="text" name="search" value="<?= htmlspecialchars($search)?>"placeholder="find bookmark">
+            <input type="text" name="search" value="<?= htmlspecialchars($search)?>" placeholder="find bookmark">
             <input type="submit" value="Search">
         <label>
             Sort by:
@@ -169,6 +171,7 @@ $tags = $tagsStmt->fetchAll();
     <table>
         <thead>
             <tr>
+                <th>FAV</th>
                 <th>TITLE</th>
                 <th>URL</th>
                 <th>NOTES</th>
@@ -178,14 +181,24 @@ $tags = $tagsStmt->fetchAll();
         <tbody>
             <?php foreach ($bookmarks as $bookmark) : ?>
                 <tr>
-                    <td><?= htmlspecialchars($bookmark["title"]?? "") ?></td>
+                    <td>
+                        <form method="POST" action="favourite.php">
+                            <input type="hidden" name="id" value="<?= htmlspecialchars($bookmark["id"]) ?>">
+                            <input type="submit" name="fav" value="&starf;">
+                        </form>
+                    </td>
+                    <td>
+                        <?= htmlspecialchars($bookmark["title"]?? "")?>
+                        <?= htmlspecialchars($bookmark["favourite"]) ? "&starf;" : ""?>
+                    </td>
                     <td>
                         <a href="<?= htmlspecialchars($bookmark["url"]) ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($bookmark["url"])?></a>
                     </td>
                     <td><?= htmlspecialchars($bookmark["notes"]?? "") ?></td>
                     <td><?= htmlspecialchars($bookmark["tag_names"]?? "") ?></td>
                     <td><a href="edit.php?id=<?= htmlspecialchars($bookmark["id"]) ?>">Edit</a></td>
-                    <td><form method="POST" action="delete.php">
+                    <td>
+                        <form method="POST" action="delete.php">
                             <input type="hidden" name="id" value="<?= htmlspecialchars($bookmark["id"]) ?>">
                             <input type="submit" value="Delete">
                         </form>
@@ -196,11 +209,11 @@ $tags = $tagsStmt->fetchAll();
     </table>
     <?php if ($totalPages > 1) : ?>
         <?php if ($page > 1) : ?>
-            <a href="?page=<?=$page - 1?>&search=<?=htmlspecialchars($search)?>&tag=<?=htmlspecialchars($tagFilter)?>&sort=<?=htmlspecialchars($sortKey)?>&dir=<?=htmlspecialchars($dir)?>">Previous</a>
+            <a href="?page=<?=$page - 1?>&per_page=<?=htmlspecialchars($perPage)?>&search=<?=htmlspecialchars($search)?>&tag=<?=htmlspecialchars($tagFilter)?>&sort=<?=htmlspecialchars($sortKey)?>&dir=<?=htmlspecialchars($dir)?>">Previous</a>
         <?php endif; ?>
 
         <?php if ($page < $totalPages) : ?>
-            <a href="?page=<?=$page + 1?>&search=<?=htmlspecialchars($search)?>&tag=<?=htmlspecialchars($tagFilter)?>&sort=<?=htmlspecialchars($sortKey)?>&dir=<?=htmlspecialchars($dir)?>">Next</a>
+            <a href="?page=<?=$page + 1?>&per_page=<?=htmlspecialchars($perPage)?>&search=<?=htmlspecialchars($search)?>&tag=<?=htmlspecialchars($tagFilter)?>&sort=<?=htmlspecialchars($sortKey)?>&dir=<?=htmlspecialchars($dir)?>">Next</a>
         <?php endif; ?>
     <?php endif;  ?>  
 </body>

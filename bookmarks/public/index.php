@@ -111,6 +111,9 @@ $tags = $tagsStmt->fetchAll();
         th { text-align: left;padding: .75rem 1rem; font-size: .9rem; }
         td { padding: .65rem 1rem; border-bottom: 1px solid #eee; color: #333; }
         tr:last-child td { border-bottom: none; }
+        .pagination { display: flex; justify-content: flex-end; gap: 10px; margin-top: 2px; }
+        .tag-filter {display:flex; gap:5px}
+        .bar {display:flex; justify-content:space-between}
     </style>
 </head>
 <body>
@@ -142,8 +145,8 @@ $tags = $tagsStmt->fetchAll();
     <?php endif; ?>
     <h2>Bookmarks</h2>
     <p><strong>Filter by tag:</strong></p>
-    <div style="display:flex; justify-content:space-between">
-        <div style="display:flex; gap:5px">
+    <div class="bar">
+        <div class="tag-filter">
             <a href="index.php">All Tags</a>
             <?php foreach ($tags as $tag) : ?>
                 <a href="index.php?tag=<?= htmlspecialchars($tag["name"]) ?>"><?= htmlspecialchars($tag["name"]) ?></a>
@@ -168,9 +171,10 @@ $tags = $tagsStmt->fetchAll();
         <input type="submit" value="Sort">
         </form> 
     </div>
-    <table>
+        <table>
         <thead>
             <tr>
+                <th></th>
                 <th>FAV</th>
                 <th>TITLE</th>
                 <th>URL</th>
@@ -182,9 +186,13 @@ $tags = $tagsStmt->fetchAll();
             <?php foreach ($bookmarks as $bookmark) : ?>
                 <tr>
                     <td>
-                        <form method="POST" action="favourite.php">
+                        <input type="checkbox" name="selected_ids[]" value="<?= htmlspecialchars($bookmark["id"])?>" form="bulk_form">
+                    </td>
+                    <td>
+                        <form method="POST" action="actions.php">
                             <input type="hidden" name="id" value="<?= htmlspecialchars($bookmark["id"]) ?>">
-                            <input type="submit" name="fav" value="&starf;">
+                            <input type="hidden" name="action" value="favourite">
+                            <button type="submit"><?=$bookmark["favourite"] ? "&starf;" : "&star;"?></button>
                         </form>
                     </td>
                     <td>
@@ -192,29 +200,48 @@ $tags = $tagsStmt->fetchAll();
                         <?= htmlspecialchars($bookmark["favourite"]) ? "&starf;" : ""?>
                     </td>
                     <td>
-                        <a href="<?= htmlspecialchars($bookmark["url"]) ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($bookmark["url"])?></a>
+                        <a href="<?= htmlspecialchars($bookmark["url"]) ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($bookmark["url"]?? "")?></a>
                     </td>
                     <td><?= htmlspecialchars($bookmark["notes"]?? "") ?></td>
                     <td><?= htmlspecialchars($bookmark["tag_names"]?? "") ?></td>
                     <td><a href="edit.php?id=<?= htmlspecialchars($bookmark["id"]) ?>">Edit</a></td>
                     <td>
-                        <form method="POST" action="delete.php">
+                        <form method="POST" action="actions.php">
                             <input type="hidden" name="id" value="<?= htmlspecialchars($bookmark["id"]) ?>">
-                            <input type="submit" value="Delete">
+                            <input type="hidden" name="action" value="delete_single">
+                            <button type="submit">Delete</button>
                         </form>
                     </td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
+    <form method="POST" action="actions.php" id="bulk_form">
+        <div>
+            <p>Add tags to selected bookmarks:</p>
+            <?php foreach ($tags as $tag) : ?>
+                <label>
+                    <input type="checkbox" name="bulk_tags[]" value="<?= $tag["id"] ?>"><?= htmlspecialchars($tag["name"]) ?>
+                </label>
+            <?php endforeach; ?>
+        </div>
+        <select name="action">
+            <option value="">Bulk Action</option>
+            <option value="delete">Delete</option>
+            <option value="add_tags">Add Tags</option>
+        </select>
+        <input type="submit" value="Apply">
+    </form>
+    <div class="pagination">
     <?php if ($totalPages > 1) : ?>
         <?php if ($page > 1) : ?>
             <a href="?page=<?=$page - 1?>&per_page=<?=htmlspecialchars($perPage)?>&search=<?=htmlspecialchars($search)?>&tag=<?=htmlspecialchars($tagFilter)?>&sort=<?=htmlspecialchars($sortKey)?>&dir=<?=htmlspecialchars($dir)?>">Previous</a>
-        <?php endif; ?>
+         <?php endif; ?>
 
         <?php if ($page < $totalPages) : ?>
             <a href="?page=<?=$page + 1?>&per_page=<?=htmlspecialchars($perPage)?>&search=<?=htmlspecialchars($search)?>&tag=<?=htmlspecialchars($tagFilter)?>&sort=<?=htmlspecialchars($sortKey)?>&dir=<?=htmlspecialchars($dir)?>">Next</a>
         <?php endif; ?>
-    <?php endif;  ?>  
+    <?php endif;  ?>
+    </div>
 </body>
 </html>

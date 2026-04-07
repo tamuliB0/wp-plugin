@@ -118,15 +118,15 @@ $tags = $tagsStmt->fetchAll();
 </head>
 <body>
     <h2>Add new bookmark</h2>
-    <form method="POST">
-        <label for="title">Title:</label>
-        <input type="text" name="title" id="title" required>
+        <form method="POST">
+            <label for="title">Title:</label>
+                <input type="text" name="title" id="title" required>
 
-        <label for="url">Url:</label>
-        <input type="text" name="url" id="url" required>
+            <label for="url">Url:</label>
+                <input type="text" name="url" id="url" required>
 
-        <label for="notes">Notes:</label>
-        <input type="text" name="notes" id="notes">
+            <label for="notes">Notes:</label>
+            <input type="text" name="notes" id="notes">
         <p>Select Tag:</p>
         <?php foreach ($tags as $tag) : ?>
             <label>
@@ -143,6 +143,11 @@ $tags = $tagsStmt->fetchAll();
             <?php endforeach; ?>
         </ul>
     <?php endif; ?>
+    <p>Import bookmarks:</p>
+    <form method="POST" action="import.php" style="display:inline" id="import-url">
+        <textarea name="url" placeholder="https://example.com"></textarea>
+        <input type="submit" value="Import" form="import-url">
+    </form>
     <h2>Bookmarks</h2>
     <p><strong>Filter by tag:</strong></p>
     <div class="bar">
@@ -195,10 +200,7 @@ $tags = $tagsStmt->fetchAll();
                             <button type="submit"><?=$bookmark["favourite"] ? "&starf;" : "&star;"?></button>
                         </form>
                     </td>
-                    <td>
-                        <?= htmlspecialchars($bookmark["title"]?? "")?>
-                        <?= htmlspecialchars($bookmark["favourite"]) ? "&starf;" : ""?>
-                    </td>
+                    <td><?= htmlspecialchars($bookmark["title"]?? "")?></td>
                     <td>
                         <a href="<?= htmlspecialchars($bookmark["url"]) ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($bookmark["url"]?? "")?></a>
                     </td>

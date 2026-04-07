@@ -4,7 +4,8 @@ require __DIR__ . "/db.php";
 $action = $_POST["action"] ?? "";
 $ids = $_POST["selected_ids"] ?? [];
 
-if ($action === "") {
+$allowedActions = ["favourite", "add_tags", "delete_single", "delete"];
+if (!in_array($action, $allowedActions)) {
     header("Location: /index.php");
     exit();
 }
@@ -50,7 +51,8 @@ if ($action === "add_tags" && !empty($ids)) {
                     ":bookmark_id" => $bookmarkId,
                     ":tag_id" => $tagId
                 ]);
-            }}
+            }
+        }
     }
     header("Location: /index.php");
     exit();

@@ -7,7 +7,6 @@ requireLogin();
 $stmt = $pdo->prepare("SELECT id, name FROM categories WHERE user_id = :user_id");
 $stmt->execute([":user_id" => $_SESSION["id"]]);
 $categories = $stmt->fetchAll();
-
 $flash = flash();
 ?>
 <!DOCTYPE html>

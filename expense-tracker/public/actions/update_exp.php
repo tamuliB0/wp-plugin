@@ -58,7 +58,7 @@ if ($newCategory !== "") {
     redirect("/dashboard.php");
     }
 
-$fetchExpStmt = $pdo->prepare("SELECT id FROM expenses WHERE id = :id AND user_id = :user_id");
+$fetchExpStmt = $pdo->prepare("SELECT receipt FROM expenses WHERE id = :id AND user_id = :user_id");
 $fetchExpStmt->execute([
     ":id" => $id,
     ":user_id" => $sessionId,
@@ -68,8 +68,39 @@ if ($expense === false) {
     setFlash("error", "Expense not found");
     redirect("/dashboard.php");
 }
+
+$attachment = $expense["receipt"];
+
+if (isset($_FILES["uploads"]) && $_FILES["uploads"]["error"] !== UPLOAD_ERR_NO_FILE) {
+    $allowedType = ["image/jpeg", "image/png", "application/pdf"];
+    $maxSize = 2 * 1024 * 1024;
+    
+    if ($_FILES["uploads"]["error"] !== UPLOAD_ERR_OK) {
+        setFlash("error", "File upload failed");
+        redirect("/dashboard.php");
+    }
+    if ($_FILES["uploads"]["size"] > $maxSize) {
+        setFlash("error", "File size exceeded max limit");
+        redirect("/dashboard.php");
+    } 
+    if (!in_array($_FILES["uploads"]["type"], $allowedType)) {
+        setFlash("error", "File type not supported");
+        redirect("/dashboard.php");
+    }
+
+    $uploads = $dir . "/uploads/";
+    $filename = $_FILES["uploads"]["name"];
+
+    if (!move_uploaded_file($_FILES["uploads"]["tmp_name"], $uploads . $filename)) {
+        setFlash("error", "Failed to save file");
+        redirect("/dashboard.php");
+    }
+    $attachment = $filename;
+
+} 
 $updateStmt = $pdo->prepare("UPDATE expenses 
-            SET description = :description, amount = :amount, date = :date, category_id = :category_id
+            SET description = :description, amount = :amount, date = :date, 
+            category_id = :category_id, receipt = :receipt
             WHERE id = :id AND user_id = :user_id");
 
 $updateStmt->execute([
@@ -77,6 +108,7 @@ $updateStmt->execute([
     ":amount" => $amount,
     ":date" => $date,
     ":category_id" => $categoryId,
+    ":receipt" => $attachment,
     ":id" => $id,
     ":user_id" => $sessionId    
 ]);

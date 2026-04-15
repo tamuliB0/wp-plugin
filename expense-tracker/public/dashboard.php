@@ -3,15 +3,45 @@ session_start();
 require __DIR__ . "/helpers.php";
 require __DIR__ . "/db.php";
 requireLogin();
+$selectedCategory = $_GET["category"] ?? "";
+$startDate = $_GET["start_date"] ?? "";
+$endDate = $_GET["end_date"] ?? "";
 
-$listStmt = $pdo->prepare("SELECT expenses.*, categories.name AS category 
-                    FROM expenses
-                    JOIN categories
-                    ON expenses.category_id = categories.id
-                    WHERE expenses.user_id = :user_id
-                    ORDER BY date DESC");
-$listStmt->execute([":user_id" => $_SESSION["id"]]);
+$conditions = [];
+$params = [];
+$baseSql = "SELECT expenses.*, categories.name AS category 
+        FROM expenses
+        JOIN categories
+        ON expenses.category_id = categories.id";
+
+$conditions[] = "expenses.user_id = :user_id";
+$params = [":user_id" => $_SESSION["id"]];
+
+if ($selectedCategory !== "") {
+    $conditions[] = "expenses.category_id = :category_id";
+    $params[":category_id"] = $selectedCategory;
+}
+if ($startDate !== "" && $endDate !== "") {
+    $conditions[] = "expenses.date BETWEEN :start_date AND :end_date";
+    $params[":start_date"] = $startDate;
+    $params[":end_date"] = $endDate;
+} elseif ($startDate !== "") {
+    $conditions[] = "expenses.date >= :start_date";
+    $params[":start_date"] = $startDate;    
+} elseif ($endDate !== "") {
+    $conditions[] = "expenses.date <= :end_date";
+    $params[":end_date"] = $endDate;
+}
+
+if (!empty($conditions)) {
+    $baseSql .= " WHERE " . implode(" AND ", $conditions);
+}
+
+$baseSql .= " ORDER BY date DESC";
+$listStmt = $pdo->prepare($baseSql);
+$listStmt->execute($params);
 $expenses = $listStmt->fetchAll();
+
 $fetchCatergoryStmt = $pdo->prepare("SELECT id, name FROM categories WHERE user_id = :user_id");
 $fetchCatergoryStmt->execute([":user_id" => $_SESSION["id"]]);
 $categories = $fetchCatergoryStmt->fetchAll();
@@ -25,7 +55,7 @@ $flash = flash();
     <title>Dashboard</title>
         <style>
         body { font-family: sans-serif; background: #f5f5f5; padding: 2rem; }
-        form { margin-bottom: 10px;}
+        form { margin-top: 10px;margin-bottom: 10px;}
         h1   { font-size: 1.6rem; margin-bottom: 1.25rem; }
         table { width: 100%; border-collapse: collapse;background: #e2e2e2; border-radius: 8px;box-shadow: 0 2px 6px rgba(0,0,0,.1); overflow: hidden; }
         th { text-align: left;padding: .75rem 1rem; font-size: .9rem; }
@@ -45,9 +75,9 @@ $flash = flash();
     <?php if ($flash) : ?>
         <div class="flash <?= htmlspecialchars($flash["type"])?>">
             <?= htmlspecialchars($flash["message"])?>
-    </div>
+        </div>
     <?php endif ; ?>
-    <form method="POST" action="/actions/add_exp.php">
+    <form method="POST" action="/actions/add_exp.php" enctype="multipart/form-data">
         <input type="text" name="description" placeholder="Expense name">
         <input type="number" name="amount" placeholder="amount">
         <input type="text" name="new_category" placeholder="add new category">
@@ -59,7 +89,9 @@ $flash = flash();
                     <?= htmlspecialchars($category["name"]) ?>
                 </option>
             <?php endforeach; ?>
-        </select>
+        </select>        
+        <label>Attachment:</label>
+        <input type="file" name="uploads">
         <button type="submit">Add Expense</button>
     </form>
     <a href="categories.php" class="a">Manage Categories</a>
@@ -70,6 +102,7 @@ $flash = flash();
                 <th>Amount</th>
                 <th>Category</th>
                 <th>Date</th>
+                <th>View</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -79,9 +112,12 @@ $flash = flash();
                 <td><?= htmlspecialchars($expense["description"]) ?></td>
                 <td><?= number_format($expense["amount"], 2) ?></td>
                 <td><?= htmlspecialchars($expense["category"]) ?></td>
-                <td><?= htmlspecialchars($expense["date"]) ?></td>
+                <td><?= htmlspecialchars(formatDate($expense["date"])) ?></td>
                 <td>
-                    <a href="/edit.php?id=<?= $expense["id"] ?>">Edit</a>
+                    <a href="details.php?id=<?= htmlspecialchars($expense["id"])?>">View details</a>
+                </td>
+                <td>
+                    <a href="/edit.php?id=<?= htmlspecialchars($expense["id"]) ?>">Edit</a>
                     <form method="POST" action="/actions/delete_exp.php">
                         <input type="hidden" name="id" value="<?= htmlspecialchars($expense["id"])?>">
                         <input type="submit" value="Delete">
@@ -91,5 +127,19 @@ $flash = flash();
             <?php endforeach; ?>
         </tbody>
     </table>
+    <form method="GET">
+        <select name="category">
+            <option value="">Filter by:</option>
+            <?php foreach ($categories as $category) : ?>
+                <option value="<?= htmlspecialchars($category["id"]) ?>"
+                <?= $selectedCategory == $category["id"] ? "selected" : ""?>>
+                    <?= htmlspecialchars($category["name"]) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <input type="date" name="start_date" value="<?= htmlspecialchars($startDate ?? "") ?>">
+        <input type="date" name="end_date" value="<?= htmlspecialchars($endDate ?? "") ?>">
+        <button type="submit">Filter</button>
+    </form>
 </body>
 </html>

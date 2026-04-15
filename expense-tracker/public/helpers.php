@@ -32,3 +32,8 @@ function requireLogin(): void
         redirect("/login.php"); 
     }
 }
+function formatDate($date): string
+{
+    $date = new DateTime($date);
+    return $date->format("d-m-Y");
+}

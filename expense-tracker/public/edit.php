@@ -48,7 +48,7 @@ $flash = flash();
             <?= htmlspecialchars($flash["message"])?>
     </div>
     <?php endif ; ?>
-    <form method="POST" action="/actions/update_exp.php">
+    <form method="POST" action="/actions/update_exp.php" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= htmlspecialchars($expense["id"])?>">
         <input type="text" name="description" value="<?= htmlspecialchars($expense["description"] ?? "") ?>"
         placeholder="Expense name">
@@ -66,6 +66,14 @@ $flash = flash();
                 </option>
             <?php endforeach; ?>
         </select>
+        <?php if (!empty($expense["receipt"])): ?>
+            <p>Current attachment:
+                <a href="/uploads/<?= htmlspecialchars($expense["receipt"]) ?>" target="_blank"><?= htmlspecialchars($expense["receipt"])?></a>
+            </p>
+        <?php endif; ?>
+
+        <label>Attachment:</label>
+        <input type="file" name="uploads">
         <button type="submit">Update</button>
     </form>
 </body>

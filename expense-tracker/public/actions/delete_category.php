@@ -28,7 +28,7 @@ if ($category === false) {
 
 $stmt = $pdo->prepare("SELECT COUNT(*) AS count FROM expenses WHERE category_id = :id");
 $stmt->execute([":id" => $id]);
-$count = $stmt->fetchColumn()["count"];
+$count = $stmt->fetch()["count"];
 if ($count > 0) {
     setFlash("error", "Cannot delete category with expenses");
     redirect("/categories.php");

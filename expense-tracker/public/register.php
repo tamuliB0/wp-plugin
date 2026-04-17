@@ -10,7 +10,7 @@ $submittedUsername = trim($_POST["username"] ?? "");
 $submittedEmail = trim($_POST["email"] ?? "");
 $submittedPassword = trim($_POST["password"] ?? "");
 
-if (!filter_var($submittedEmail, FILTER_VALIDATE_EMAIL) || strlen($submittedPassword) < 3) {
+if (!filter_var($submittedEmail, FILTER_VALIDATE_EMAIL) || strlen($submittedPassword) < 3 || $submittedUsername === "") {
     setFlash("error", "Invalid email or password");
     redirect("/index.php");
 }

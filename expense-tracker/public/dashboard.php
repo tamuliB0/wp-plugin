@@ -64,7 +64,7 @@ $flash = flash();
         .flash { margin-bottom: 10px; }
         .flash.error { background-color:  #f2f0f0; color: #f43838}
         .flash.success { background-color:  #b5d0b8; color: #13521f}
-        .a { display:flex; justify-content:flex-end}
+        .a { display:flex; justify-content:flex-end; margin-top: 10px;margin-bottom: 10px;}
     </style>
 </head>
 <body>
@@ -76,7 +76,7 @@ $flash = flash();
         <div class="flash <?= htmlspecialchars($flash["type"])?>">
             <?= htmlspecialchars($flash["message"])?>
         </div>
-    <?php endif ; ?>
+    <?php endif; ?>
     <form method="POST" action="/actions/add_exp.php" enctype="multipart/form-data">
         <input type="text" name="description" placeholder="Expense name">
         <input type="number" name="amount" placeholder="amount">
@@ -94,7 +94,8 @@ $flash = flash();
         <input type="file" name="uploads">
         <button type="submit">Add Expense</button>
     </form>
-    <a href="categories.php" class="a">Manage Categories</a>
+    <a href="/summary.php" class="a">View summary</a>
+    <a href="/categories.php" class="a">Manage Categories</a>
     <table>
         <thead>
             <tr>
@@ -110,11 +111,11 @@ $flash = flash();
             <?php foreach ($expenses as $expense) : ?>
             <tr>
                 <td><?= htmlspecialchars($expense["description"]) ?></td>
-                <td><?= number_format($expense["amount"], 2) ?></td>
+                <td><?= "$" . number_format($expense["amount"], 2) ?></td>
                 <td><?= htmlspecialchars($expense["category"]) ?></td>
                 <td><?= htmlspecialchars(formatDate($expense["date"])) ?></td>
                 <td>
-                    <a href="details.php?id=<?= htmlspecialchars($expense["id"])?>">View details</a>
+                    <a href="/details.php?id=<?= htmlspecialchars($expense["id"])?>">View details</a>
                 </td>
                 <td>
                     <a href="/edit.php?id=<?= htmlspecialchars($expense["id"]) ?>">Edit</a>

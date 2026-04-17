@@ -51,7 +51,7 @@ $flash = flash();
         </div>
     <?php endif ; ?>
     <p><strong>Expense: </strong><?= htmlspecialchars($expense["description"])?></p>
-    <p><strong>Amount: </strong><?= htmlspecialchars($expense["amount"])?></p>
+    <p><strong>Amount: </strong><?= htmlspecialchars("$" . $expense["amount"])?></p>
     <p><strong>Category: </strong><?= htmlspecialchars($expense["category"])?></p>
     <p><strong>Date: </strong><?= htmlspecialchars(formatDate($expense["date"]))?></p>
     <p><strong>Receipt: </strong></p>

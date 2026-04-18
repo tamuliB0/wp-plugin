@@ -140,7 +140,12 @@ $flash = flash();
         </select>
         <input type="date" name="start_date" value="<?= htmlspecialchars($startDate ?? "") ?>">
         <input type="date" name="end_date" value="<?= htmlspecialchars($endDate ?? "") ?>">
-        <button type="submit">Filter</button>
+        <button type="submit" name="action" value="filter">Filter</button>
+    </form>
+    <form method="GET" action="/actions/export.php">
+        <input type="date" name="start_date" value="<?= htmlspecialchars($startDate ?? "") ?>">
+        <input type="date" name="end_date" value="<?= htmlspecialchars($endDate ?? "") ?>">        
+        <button type="submit" name="action" value="export">Export</button>
     </form>
 </body>
 </html>

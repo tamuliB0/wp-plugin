@@ -25,10 +25,15 @@ CREATE TABLE IF NOT EXISTS expenses (
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
 );
 
+CREATE TABLE budgets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    amount DECIMAL(10,2),
+    month DATE NOT NULL,
+    category_id INT NOT NULL,
+    user_id INT NOT NULL,
 
-
-
-
--- You will design and create additional tables (expenses, categories,
--- etc.) as you work through the milestones. Add your CREATE TABLE
--- statements to this file so your schema stays in one place.
+    UNIQUE KEY (user_id, category_id, month),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);

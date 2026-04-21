@@ -53,7 +53,7 @@ $flash = flash();
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard</title>
-        <style>
+    <style>
         body { font-family: sans-serif; background: #f5f5f5; padding: 2rem; }
         form { margin-top: 10px;margin-bottom: 10px;}
         h1   { font-size: 1.6rem; margin-bottom: 1.25rem; }
@@ -70,7 +70,8 @@ $flash = flash();
 <body>
     <h1>Dashboard</h1>
     <p> Welcome,<strong><?= htmlspecialchars($_SESSION["user"] ?? "") ?></strong> </p>
-    <a href="/logout.php" class="a">Logout</a>
+    <a href="/logout.php">Logout</a>
+    <a href="budget.php">Create a budget</a>
     <h3>Add new expense</h3>
     <?php if ($flash) : ?>
         <div class="flash <?= htmlspecialchars($flash["type"])?>">

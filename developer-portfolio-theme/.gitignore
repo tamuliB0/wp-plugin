@@ -1,0 +1,27 @@
+# WordPress core (downloaded via ddev wp core download)
+/wp-admin/
+/wp-includes/
+/wp-*.php
+/index.php
+/license.txt
+/readme.html
+/xmlrpc.php
+
+# WordPress content (except our theme)
+/wp-content/*
+!/wp-content/themes/
+/wp-content/themes/*
+!/wp-content/themes/developer-portfolio/
+!/wp-content/themes/developer-portfolio-child/
+
+# Dependencies
+/vendor/
+
+# Environment
+.env
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+.phpunit.cache/

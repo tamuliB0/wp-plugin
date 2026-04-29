@@ -1,0 +1,13 @@
+{
+  "name": "mbtamuli/developer-portfolio-theme",
+  "description": "WordPress classic theme: developer portfolio",
+  "type": "project",
+  "require": {
+    "php": ">=8.1"
+  },
+  "require-dev": {
+    "squizlabs/php_codesniffer": "^3.0",
+    "wp-coding-standards/wpcs": "^3.0",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+  }
+}

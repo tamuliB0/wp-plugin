@@ -1,11 +1,8 @@
 <?php
-/**
- * Main template file.
- *
- * @package Developer_Portfolio
- */
 get_header();
-
+?>
+<h3>Search results for <?php echo "'" . get_search_query() . "'"?></h3>
+<?php 
 if (have_posts()) :
     while (have_posts()) : the_post();
         ?>

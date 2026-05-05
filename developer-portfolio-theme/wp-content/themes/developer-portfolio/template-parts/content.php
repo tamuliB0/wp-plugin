@@ -3,6 +3,7 @@
 
 <?php if (is_singular()) : ?>
     <?php the_content();?>
+    <?php get_sidebar()?>
 <?php else : ?>
     <?php the_excerpt();?>
 <?php endif; ?>

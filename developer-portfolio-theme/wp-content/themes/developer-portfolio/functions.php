@@ -16,3 +16,22 @@ function post_thumbnail()
     add_theme_support("post-thumbnails", array("post"));
 }
 add_action("after_setup_theme", "post_thumbnail");
+
+function mytheme_register_menus()
+{
+    register_nav_menus(array(
+            "header-menu" => __("Primary Menu"),
+            "footer-menu" => __("Footer Menu")
+        )
+    );
+}
+add_action("init", "mytheme_register_menus");
+
+function mytheme_register_sidebar()
+{
+    register_sidebar(array(
+            "name" => __("Primary sidebar", "myWidget"),
+            "id" => "primary"
+        ));
+}
+add_action("widgets_init", "mytheme_register_sidebar");

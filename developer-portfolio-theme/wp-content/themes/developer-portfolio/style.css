@@ -12,3 +12,15 @@ License: GNU General Public License v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: developer-portfolio
 */
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+@media (max-width: 600px){
+    .grid-container {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<ruleset name="Reading List Plugin">
+    <description>WordPress Coding Standards for the Reading List plugin</description>
+
+    <file>wp-content/plugins/reading-list/</file>
+
+    <rule ref="WordPress"/>
+
+    <arg value="ps"/>
+    <arg name="colors"/>
+</ruleset>

@@ -46,3 +46,61 @@ register_deactivation_hook( __FILE__, 'reading_list_deactivate' );
  */
 function reading_list_deactivate() {
 }
+
+/**
+ * Display reading list shortcode output
+ *
+ * @param array $atts Shortcode attributes. Default empty.
+ */
+function reading_list_shortcode( $atts = array() ) {
+
+	$atts = array_change_key_case( (array) $atts, CASE_LOWER );
+	$atts = shortcode_atts( array( 'status' => '' ), $atts, 'reading_list' );
+
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'reading_list';
+
+	if ( '' !== $atts['status'] ) {
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT title, author, status
+				FROM %i WHERE status = %s
+				ORDER BY created_at DESC',
+				$table_name,
+				$atts['status']
+			)
+		);
+	} else {
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT title, author, status
+				FROM %i ORDER BY created_at DESC',
+				$table_name
+			)
+		);
+	}
+	ob_start();
+	?>
+	<table>
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Title', 'reading-list' ); ?></th>
+				<th><?php esc_html_e( 'Author', 'reading-list' ); ?></th>
+				<th><?php esc_html_e( 'Status', 'reading-list' ); ?></th>				
+			</tr>
+		</thead>
+		<tbody>
+			<?php foreach ( $results as $result ) : ?>
+			<tr>
+				<td><?php echo esc_html( $result->title ); ?></td>
+				<td><?php echo esc_html( $result->author ); ?></td>
+				<td><?php echo esc_html( $result->status ); ?></td>
+			</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
+
+	<?php
+	return ob_get_clean();
+}
+add_shortcode( 'reading_list', 'reading_list_shortcode' );

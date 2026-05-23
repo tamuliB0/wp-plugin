@@ -1,15 +1,24 @@
 <?php
-get_header();
+/**
+ * Template for single posts.
+ *
+ * @package Developer_Portfolio
+ */
 
-if (have_posts()) :
-    while (have_posts()) : the_post();
-    ?>
-    <?php get_template_part("template-parts/content");?>
+get_header(); ?>
+<?php post_class(); ?>
+<?php
+if ( have_posts() ) :
+	while ( have_posts() ) :
+		the_post();
+		?>
+		<?php get_template_part( 'template-parts/content' ); ?>
 
-    <?php endwhile;
+		<?php
+	endwhile;
 else :
-    _e("No posts found", "developer-portfolio");
+	esc_html_e( 'No posts found', 'developer-portfolio' );
 endif;
 
 get_footer();
-?>
+

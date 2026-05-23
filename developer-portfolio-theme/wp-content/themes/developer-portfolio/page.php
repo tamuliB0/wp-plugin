@@ -1,16 +1,23 @@
 <?php
+/**
+ * Template for static page.
+ *
+ * @package Developer_Portfolio
+ */
+
 get_header();
 
-if (have_posts()) :
-    while (have_posts()) : the_post();
-    ?>
+if ( have_posts() ) :
+	while ( have_posts() ) :
+		the_post();
+		?>
 
-    <h1><?php the_title();?></h1>
-    <?php the_content();?>
-    
-    <?php endwhile;
+	<h1><?php echo esc_html( get_the_title() ); ?></h1>
+		<?php the_content(); ?>
+	
+	<?php endwhile;
 else :
-    _e("No page found", "developer-portfolio");
+	esc_html_e( 'No page found', 'developer-portfolio' );
 endif;
 get_footer();
 ?>

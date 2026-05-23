@@ -58,8 +58,17 @@ function reading_list_shortcode( $atts = array() ) {
 
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'reading_list';
-	$status     = sanitize_text_field( $atts['status'] );
-	$cache_key  = 'reading_list_status_' . ( '' === $status ? 'all' : $status );
+
+	$per_page     = get_option( 'reading_list_per_page', 10 );
+	$current_page = isset( $_GET['page'] ) ? absint( $_GET['page'] ) : 1;
+	$offset       = ( $current_page - 1 ) * $per_page;
+
+	$total_books = $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table_name ) );
+
+	$total_pages = ceil( $total_books / $per_page );
+
+	$status    = sanitize_text_field( $atts['status'] );
+	$cache_key = 'reading_list_status_' . ( '' === $status ? 'all' : $status );
 
 	$results = wp_cache_get( $cache_key, 'reading_list' );
 
@@ -68,15 +77,21 @@ function reading_list_shortcode( $atts = array() ) {
 			$sql = $wpdb->prepare(
 				'SELECT title, author, status
 				FROM %i WHERE status = %s
-				ORDER BY created_at DESC',
+				ORDER BY created_at DESC
+				LIMIT %d OFFSET %d',
 				$table_name,
-				$status
+				$status,
+				$per_page,
+				$offset
 			);
 		} else {
 			$sql = $wpdb->prepare(
 				'SELECT title, author, status
-				FROM %i ORDER BY created_at DESC',
-				$table_name
+				FROM %i ORDER BY created_at DESC
+				LIMIT %d OFFSET %d',
+				$table_name,
+				$per_page,
+				$offset
 			);
 		}
 		$results = $wpdb->get_results( $sql ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared
@@ -118,8 +133,113 @@ function reading_list_options_page() {
 		'reading_list',
 		'reading_list_options_page_html'
 	);
+
+	add_submenu_page(
+		'reading_list',
+		__( 'Reading List', 'reading-list' ),
+		__( 'Reading List', 'reading-list' ),
+		'manage_options',
+		'reading_list',
+		'reading_list_options_page_html'
+	);
+	// add submenu.
+	add_submenu_page(
+		'reading_list',
+		__( 'Settings', 'reading-list' ),
+		__( 'Settings', 'reading-list' ),
+		'manage_options',
+		'reading_list_settings',
+		'reading_list_settings_page_html'
+	);
 }
 add_action( 'admin_menu', 'reading_list_options_page' );
+
+/**
+ * Register reading_list_per_page settings
+ */
+function reading_list_register_settings() {
+	add_settings_section(
+		'reading_list_main_section',
+		'',
+		'reading_list_main_section_html',
+		'reading_list_settings'
+	);
+
+	add_settings_field(
+		'reading_list_per_page',
+		'Books per page',
+		'reading_list_per_page_html',
+		'reading_list_settings',
+		'reading_list_main_section'
+	);
+
+	register_setting(
+		'reading_list_settings_group',
+		'reading_list_per_page',
+		array(
+			'type'              => 'integer',
+			'sanitize_callback' => 'validate_per_page_input',
+			'default'           => 10,
+		)
+	);
+}
+add_action( 'admin_init', 'reading_list_register_settings' );
+
+/**
+ * Validates the 'book per page' setting input
+ *
+ * @param int $input user provided value.
+ */
+function validate_per_page_input( $input ) {
+	$input = absint( $input );
+
+	if ( $input <= 0 ) {
+		add_settings_error(
+			'reading_list_per_page',
+			'reading_list_per_page_error',
+			'Number must be a postive integer',
+			'error'
+		);
+		return get_option( 'reading_list_per_page', 10 );
+	}
+	return $input;
+}
+
+/**
+ * Settings page callback
+ */
+function reading_list_main_section_html() {
+	?>
+	<p>Configure pagination for shortcode</p>
+	<?php
+}
+
+/**
+ * Field callback
+ */
+function reading_list_per_page_html() {
+	$value = get_option( 'reading_list_per_page', 10 );
+	?>
+	<input type="number" name="reading_list_per_page" value="<?php echo esc_attr( $value ); ?>"/>
+	<?php
+}
+
+/**
+ * Diplay settings page
+ */
+function reading_list_settings_page_html() {
+	?>
+	<h1>Reading List Settings</h1>
+	<?php settings_errors(); ?>
+	<form method="post" action="options.php">
+		<?php
+		settings_fields( 'reading_list_settings_group' );
+		do_settings_sections( 'reading_list_settings' );
+		submit_button();
+		?>
+	</form>
+	<?php
+}
 
 /**
  * Handles add/update form submission logic.
@@ -261,6 +381,7 @@ function reading_list_delete_book() {
 	exit;
 }
 add_action( 'admin_init', 'reading_list_delete_book' );
+
 /**
  * Display the admin page for reading list
  */
@@ -272,12 +393,13 @@ function reading_list_options_page_html() {
 	if ( isset( $_GET['id'] ) ) {
 		$book_id = absint( $_GET['id'] );
 
-		$sql       = $wpdb->prepare(
-			'SELECT * FROM %i WHERE id = %d',
-			$table_name,
-			$book_id,
+		$edit_book = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE id = %d',
+				$table_name,
+				$book_id,
+			)
 		);
-		$edit_book = $wpdb->get_row( $sql );
 	}
 
 	$message = isset( $_GET['message'] ) ? sanitize_text_field( wp_unslash( $_GET['message'] ) ) : '';
@@ -346,7 +468,7 @@ function reading_list_options_page_html() {
 			<input type="text" name="notes" value="<?php echo esc_attr( $edit_book->notes ); ?>">
 			
 			<input type="submit" value="<?php esc_attr_e( 'Update', 'reading-list' ); ?>">
-			<a href="<?php echo esc_url( menu_page_url( 'reading_list', false ) )?>" >Go back</a>
+			<a href="<?php echo esc_url( menu_page_url( 'reading_list', false ) ); ?>" >Go back</a>
 		</form>
 
 	<?php else : ?>

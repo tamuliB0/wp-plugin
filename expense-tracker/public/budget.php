@@ -34,7 +34,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $checkStmt = $pdo->prepare("SELECT id from categories WHERE id = :id AND user_id = :user_id");
     $checkStmt->execute([
-        ":id" =>         $categoryId,
+        ":id" => $categoryId,
         ":user_id" => $_SESSION["id"]
     ]);
     $row = $checkStmt->fetch();
@@ -56,7 +56,7 @@ $stmt = $pdo->prepare("SELECT expenses.*, categories.name AS category FROM expen
                         JOIN categories 
                         ON expenses.category_id = categories.id
                         WHERE expenses.user_id = :user_id
-                         AND expenses.date BETWEEN :start AND :end");
+                        AND expenses.date BETWEEN :start AND :end");
 $stmt->execute([
     ":user_id" => $_SESSION["id"],
     ":start" => $startDate,

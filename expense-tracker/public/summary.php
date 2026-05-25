@@ -16,11 +16,12 @@ $nextDate = clone $date;
 $nextDate->modify("+1 month");
 $nextMonth = $nextDate->format("Y-m");
 
-$sql = "SELECT categories.name AS category, SUM(expenses.amount) AS total FROM expenses
+$sql = "SELECT categories.name AS category, SUM(expenses.amount) AS total, is_recurring FROM expenses
         JOIN categories 
         ON expenses.category_id = categories.id
         WHERE expenses.user_id = :user_id
-        AND expenses.date BETWEEN :start AND :end
+        AND ( expenses.is_recurring = 1 AND expenses.date <= :end
+        OR expenses.is_recurring = 0 AND expenses.date BETWEEN :start AND :end )
         GROUP BY expenses.category_id
         ORDER BY total DESC";
 $stmt = $pdo->prepare($sql);
@@ -32,7 +33,9 @@ $stmt->execute([
 $summary = $stmt->fetchAll();
 
 $totalStmt = $pdo->prepare("SELECT SUM(amount) AS total FROM expenses 
-                WHERE user_id = :user_id AND expenses.date BETWEEN :start AND :end");
+                WHERE user_id = :user_id 
+                AND ( expenses.is_recurring = 1 AND expenses.date <= :end 
+                OR expenses.is_recurring = 0 AND expenses.date BETWEEN :start AND :end ) ");
 $totalStmt->execute([
     ":user_id" => $_SESSION["id"],
     ":start" => $startDate,
@@ -43,7 +46,9 @@ $total = $totalStmt->fetch()["total"] ?? 0;
 $prevStartDate = $prevDate->format("Y-m-01");
 $prevEndDate = $prevDate->format("Y-m-t");
 $previousTotalStmt = $pdo->prepare("SELECT SUM(amount) AS previous_total FROM expenses 
-                WHERE user_id = :user_id AND expenses.date BETWEEN :start AND :end");
+                WHERE user_id = :user_id 
+                AND ( expenses.is_recurring = 1 AND expenses.date <= :end 
+                OR expenses.is_recurring = 0 AND expenses.date BETWEEN :start AND :end ) ");
 $previousTotalStmt->execute([
     ":user_id" => $_SESSION["id"],
     ":start" => $prevStartDate,
@@ -62,6 +67,13 @@ if ($previousTotal <= 0 && $total <= 0) {
     $formatted = number_format(abs(round($change)),0);
 
     $message = $change < 0 ? "spent " . $formatted . "% less than previous month" : "spent " . $formatted . "% more than previous month";
+}
+$showRecurring = false;
+foreach ($summary as $row) {
+    if ($row["is_recurring"]) {
+        $showRecurring = true;
+        break;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -97,6 +109,9 @@ if ($previousTotal <= 0 && $total <= 0) {
             <tr>
                 <th>Category</th>
                 <th>Total spent</th>
+                <?php if ($showRecurring) : ?>
+                    <th>Recurring</th>
+                <?php endif; ?>
             </tr>
         </thead>
         <tbody>
@@ -109,6 +124,9 @@ if ($previousTotal <= 0 && $total <= 0) {
             <tr>
                 <td><?= htmlspecialchars($data["category"]) ?></td>
                 <td><?= "$" . number_format($data["total"], 2) ?></td>
+                <?php if ($showRecurring) : ?>
+                    <td><?= $data["is_recurring"] ? "Yes" : "" ?></td>
+                <?php endif; ?>
             </tr>
             <?php endforeach; ?>
         </tbody>

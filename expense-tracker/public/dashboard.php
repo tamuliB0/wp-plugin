@@ -37,7 +37,7 @@ if (!empty($conditions)) {
     $baseSql .= " WHERE " . implode(" AND ", $conditions);
 }
 
-$baseSql .= " ORDER BY date DESC";
+$baseSql .= " ORDER BY expenses.date DESC";
 $listStmt = $pdo->prepare($baseSql);
 $listStmt->execute($params);
 $expenses = $listStmt->fetchAll();
@@ -114,7 +114,12 @@ $flash = flash();
                 <td><?= htmlspecialchars($expense["description"]) ?></td>
                 <td><?= "$" . number_format($expense["amount"], 2) ?></td>
                 <td><?= htmlspecialchars($expense["category"]) ?></td>
-                <td><?= htmlspecialchars(formatDate($expense["date"])) ?></td>
+                <td>
+                    <?= htmlspecialchars(formatDate($expense["date"])) ?>
+                    <?php if ((int) $expense["is_recurring"] === 1) : ?>
+                        (Monthly)
+                    <?php endif; ?>
+                </td>
                 <td>
                     <a href="/details.php?id=<?= htmlspecialchars($expense["id"])?>">View details</a>
                 </td>

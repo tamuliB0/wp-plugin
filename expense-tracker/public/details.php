@@ -8,6 +8,35 @@ if (!isset($_GET["id"]) || !ctype_digit($_GET["id"])) {
     redirect("/dashboard.php");
 }
 $id = (int) $_GET["id"];
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if (!isset($_POST["id"]) || !ctype_digit($_POST["id"])) {
+        redirect("/dashboard.php");
+    }
+    $postId = (int) $_POST["id"];
+    $fetchStmt = $pdo->prepare("SELECT is_recurring AS recur FROM expenses WHERE id = :id AND user_id = :user_id");
+    $fetchStmt->execute([
+        ":id" => $postId,
+        ":user_id" => $_SESSION["id"]
+    ]);
+    $row = $fetchStmt->fetch();
+    if ($row === false) {
+        setFlash("error", "No expense found");
+        redirect("/dashboard.php");
+    }
+    $currentStatus = (int) $row["recur"];
+    $status = ($currentStatus === 1) ? 0 : 1;
+
+    $updateStmt = $pdo->prepare("UPDATE expenses SET is_recurring = :status WHERE id = :id AND user_id = :user_id");
+    $updateStmt->execute([
+        ":status" => $status, 
+        ":id" => $postId,
+        ":user_id" => $_SESSION["id"]
+    ]);
+    $message = $status ? "Expense is recurring monthly" : "Recurring is disabled";
+    setFlash("success", $message);
+    redirect("/details.php?id=" . $postId);
+}
 $stmt = $pdo->prepare("SELECT expenses.*, categories.name AS category 
         FROM expenses
         JOIN categories
@@ -45,16 +74,24 @@ $flash = flash();
 <body>
     <h1>Expense details:</h1>
     <a href="/dashboard.php" style="display:inline-block; margin-bottom:15px">Go back</a>
+    <form method="POST" action="">
+        <input type="hidden" name="id" value="<?=htmlspecialchars($id)?>">
+        <button type="submit"><?= $expense["is_recurring"] ? "Stop recurring" : "Set expense as recurring"?></button>
+    </form>
     <?php if ($flash) : ?>
         <div class="flash <?= htmlspecialchars($flash["type"])?>">
             <?= htmlspecialchars($flash["message"])?>
         </div>
     <?php endif ; ?>
+
+    <p><strong>Recurring:</strong> <?= htmlspecialchars($expense["is_recurring"] ? "Monthly" : "No")?></p>
+    
     <p><strong>Expense: </strong><?= htmlspecialchars($expense["description"])?></p>
     <p><strong>Amount: </strong><?= htmlspecialchars("$" . $expense["amount"])?></p>
     <p><strong>Category: </strong><?= htmlspecialchars($expense["category"])?></p>
     <p><strong>Date: </strong><?= htmlspecialchars(formatDate($expense["date"]))?></p>
     <p><strong>Receipt: </strong></p>
+
     <?php if (!empty($expense["receipt"])): ?>
         <p>
             <a href="/uploads/<?= htmlspecialchars($expense["receipt"]) ?>" target="_blank"><?= htmlspecialchars($expense["receipt"])?></a>

@@ -1,8 +1,6 @@
 <?php
-session_start();
-require __DIR__ . "/helpers.php";
-require __DIR__ . "/db.php";
-requireLogin();
+require __DIR__ . "/bootstrap.php";
+
 $currentMonth = $_GET["month"] ?? date("Y-m");
 $date = new DateTime($currentMonth . "-01");
 $startDate = $date->format("Y-m-01");
@@ -16,44 +14,52 @@ $nextDate = clone $date;
 $nextDate->modify("+1 month");
 $nextMonth = $nextDate->format("Y-m");
 
-$sql = "SELECT categories.name AS category, SUM(expenses.amount) AS total, is_recurring FROM expenses
-        JOIN categories 
-        ON expenses.category_id = categories.id
-        WHERE expenses.user_id = :user_id
-        AND ( expenses.is_recurring = 1 AND expenses.date <= :end
-        OR expenses.is_recurring = 0 AND expenses.date BETWEEN :start AND :end )
-        GROUP BY expenses.category_id
-        ORDER BY total DESC";
-$stmt = $pdo->prepare($sql);
-$stmt->execute([
-    ":user_id" => $_SESSION["id"],
-    ":start" => $startDate,
-    ":end" => $endDate
-]);
+$stmt = executeQuery(
+    $pdo,
+    "SELECT categories.name AS category, SUM(expenses.amount) AS total, is_recurring FROM expenses
+    JOIN categories 
+    ON expenses.category_id = categories.id
+    WHERE expenses.user_id = :user_id
+    AND ( expenses.is_recurring = 1 AND expenses.date <= :end
+    OR expenses.is_recurring = 0 AND expenses.date BETWEEN :start AND :end )
+    GROUP BY expenses.category_id
+    ORDER BY total DESC",
+    array(
+        ":user_id" => $_SESSION["id"],
+        ":start" => $startDate,
+        ":end" => $endDate
+    )
+);
 $summary = $stmt->fetchAll();
 
-$totalStmt = $pdo->prepare("SELECT SUM(amount) AS total FROM expenses 
-                WHERE user_id = :user_id 
-                AND ( expenses.is_recurring = 1 AND expenses.date <= :end 
-                OR expenses.is_recurring = 0 AND expenses.date BETWEEN :start AND :end ) ");
-$totalStmt->execute([
-    ":user_id" => $_SESSION["id"],
-    ":start" => $startDate,
-    ":end" => $endDate
-]);
+$totalStmt= executeQuery(
+    $pdo,
+    "SELECT SUM(amount) AS total FROM expenses 
+    WHERE user_id = :user_id 
+    AND ( expenses.is_recurring = 1 AND expenses.date <= :end 
+    OR expenses.is_recurring = 0 AND expenses.date BETWEEN :start AND :end ) ",
+    array(
+        ":user_id" => $_SESSION["id"],
+        ":start" => $startDate,
+        ":end" => $endDate
+    )
+);
 $total = $totalStmt->fetch()["total"] ?? 0;
 
 $prevStartDate = $prevDate->format("Y-m-01");
 $prevEndDate = $prevDate->format("Y-m-t");
-$previousTotalStmt = $pdo->prepare("SELECT SUM(amount) AS previous_total FROM expenses 
-                WHERE user_id = :user_id 
-                AND ( expenses.is_recurring = 1 AND expenses.date <= :end 
-                OR expenses.is_recurring = 0 AND expenses.date BETWEEN :start AND :end ) ");
-$previousTotalStmt->execute([
-    ":user_id" => $_SESSION["id"],
-    ":start" => $prevStartDate,
-    ":end" => $prevEndDate
-]);
+$previousTotalStmt = executeQuery(
+    $pdo,
+    "SELECT SUM(amount) AS total FROM expenses 
+    WHERE user_id = :user_id 
+    AND ( expenses.is_recurring = 1 AND expenses.date <= :end 
+    OR expenses.is_recurring = 0 AND expenses.date BETWEEN :start AND :end ) ",
+    array(
+        ":user_id" => $_SESSION["id"],
+        ":start" => $prevStartDate,
+        ":end" => $prevEndDate
+    )
+);
 $previousTotal = $previousTotalStmt->fetch()["previous_total"] ?? 0;
 
 if ($previousTotal <= 0 && $total <= 0) {

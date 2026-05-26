@@ -1,11 +1,13 @@
 <?php
-session_start();
-require __DIR__ . "/helpers.php";
-require __DIR__ . "/db.php";
-requireLogin();
+require __DIR__ . "/bootstrap.php";
 
-$stmt = $pdo->prepare("SELECT id, name FROM categories WHERE user_id = :user_id");
-$stmt->execute([":user_id" => $_SESSION["id"]]);
+$stmt = executeQuery(
+    $pdo,
+    "SELECT id, name FROM categories WHERE user_id = :user_id",
+    array(
+        ":user_id" => $_SESSION["id"]
+    )
+);
 $categories = $stmt->fetchAll();
 $flash = flash();
 ?>

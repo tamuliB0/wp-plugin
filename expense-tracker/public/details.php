@@ -1,9 +1,6 @@
 <?php 
-session_start();
-require __DIR__ . "/db.php";
-require __DIR__ . "/helpers.php";
+require __DIR__ . "/bootstrap.php";
 
-requireLogin();
 if (!isset($_GET["id"]) || !ctype_digit($_GET["id"])) {
     redirect("/dashboard.php");
 }
@@ -14,42 +11,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         redirect("/dashboard.php");
     }
     $postId = (int) $_POST["id"];
-    $fetchStmt = $pdo->prepare("SELECT is_recurring AS recur FROM expenses WHERE id = :id AND user_id = :user_id");
-    $fetchStmt->execute([
-        ":id" => $postId,
-        ":user_id" => $_SESSION["id"]
-    ]);
-    $row = $fetchStmt->fetch();
-    if ($row === false) {
-        setFlash("error", "No expense found");
-        redirect("/dashboard.php");
-    }
+    $row = fetchOrFail(
+        $pdo,
+        "SELECT is_recurring AS recur FROM expenses WHERE id = :id AND user_id = :user_id",
+        array(
+            ":id" => $postId,
+            ":user_id" => $_SESSION["id"]
+        ),
+        "error",
+        "No expense found",
+        "/dashboard.php"
+    );
     $currentStatus = (int) $row["recur"];
     $status = ($currentStatus === 1) ? 0 : 1;
-
-    $updateStmt = $pdo->prepare("UPDATE expenses SET is_recurring = :status WHERE id = :id AND user_id = :user_id");
-    $updateStmt->execute([
-        ":status" => $status, 
-        ":id" => $postId,
-        ":user_id" => $_SESSION["id"]
-    ]);
+    executeQuery(
+        $pdo,
+        "UPDATE expenses SET is_recurring = :status WHERE id = :id AND user_id = :user_id",
+        array(
+            ":status" => $status, 
+            ":id" => $postId,
+            ":user_id" => $_SESSION["id"]
+        )
+    );
     $message = $status ? "Expense is recurring monthly" : "Recurring is disabled";
-    setFlash("success", $message);
-    redirect("/details.php?id=" . $postId);
+    flashAndRedirect("success", $message, "/details.php?id=" . $postId);
 }
-$stmt = $pdo->prepare("SELECT expenses.*, categories.name AS category 
-        FROM expenses
-        JOIN categories
-        ON expenses.category_id = categories.id 
-        WHERE expenses.id = :id AND expenses.user_id = :user_id");
-$stmt->execute([
-    ":id" => $id,
-    ":user_id" => $_SESSION["id"]
-]);
-$expense = $stmt->fetch();
-if (!$expense) {
-    redirect("/dashboard.php");
-}
+$expense = fetchOrFail(
+    $pdo,
+    "SELECT expenses.*, categories.name AS category 
+    FROM expenses
+    JOIN categories
+    ON expenses.category_id = categories.id 
+    WHERE expenses.id = :id AND expenses.user_id = :user_id",
+    array(
+        ":id" => $id,
+        ":user_id" => $_SESSION["id"]
+    ),
+    "error",
+    "",
+    "/dashboard.php"
+);
 $flash = flash();
 ?>
 <!DOCTYPE html>

@@ -1,8 +1,5 @@
 <?php
-session_start();
-require __DIR__ . "/helpers.php";
-require __DIR__ . "/db.php";
-requireLogin();
+require __DIR__ . "/bootstrap.php";
 
 $currentMonth = $_GET["month"] ?? date("Y-m");
 $date = new DateTime($currentMonth . "-01");
@@ -18,83 +15,93 @@ $nextDate->modify("+1 month");
 $nextMonth = $nextDate->format("Y-m");
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $amount = $_POST["amount"] ?? null;
-    $month = $_POST["month"] ?? $currentMonth;
-    $categoryId = $_POST["category_id"] ?? null;
+    $data = [
+        $amount = $_POST["amount"] ?? null,
+        $month = $_POST["month"] ?? $currentMonth,
+        $categoryId = $_POST["category_id"] ?? null
+    ];
+    validateRequiredFields($data, "All fields are required", "/budget.php");
 
-    if ($amount === "" || $month === "" || $categoryId === "") {
-        setFlash("error", "All fields are required");
-        redirect("/budget.php");
-    }
     if (!is_numeric($amount) || $amount <= 0) {
-        setFlash("error", "Amount must be greater than 0");
-        redirect("/budget.php");
+        flashAndRedirect("error", "Amount must be greater than 0", "/budget.php");
     }
     $month = date("Y-m-01", strtotime($month));
 
-    $checkStmt = $pdo->prepare("SELECT id from categories WHERE id = :id AND user_id = :user_id");
-    $checkStmt->execute([
-        ":id" => $categoryId,
-        ":user_id" => $_SESSION["id"]
-    ]);
-    $row = $checkStmt->fetch();
-    if ($row === false) {
-        setFlash("error", "Invalid category");
-        redirect("/budget.php");
-    }
-    $insertBudgetStmt = $pdo->prepare("INSERT INTO budgets (amount, month, user_id, category_id) 
-                                        VALUES (:amount, :month, :user_id, :category_id)");
-    $insertBudgetStmt->execute([
-        ":amount" => $amount,
-        ":month" => $month,
-        ":user_id" => $_SESSION["id"],
-        ":category_id" => $categoryId
-    ]);
+    fetchOrFail(
+        $pdo,
+        "SELECT id from categories WHERE id = :id AND user_id = :user_id",
+        array(
+            ":id" => $categoryId,
+            ":user_id" => $_SESSION["id"]
+        ),
+        "error",
+        "Invalid category",
+        "/budget.php"
+    );
+    executeQuery(
+        $pdo,
+        "INSERT INTO budgets (amount, month, user_id, category_id) 
+        VALUES (:amount, :month, :user_id, :category_id)",
+        array(
+            ":amount" => $amount,
+            ":month" => $month,
+            ":user_id" => $_SESSION["id"],
+            ":category_id" => $categoryId
+        )
+    );
     redirect("/budget.php");
 }
-$stmt = $pdo->prepare("SELECT expenses.*, categories.name AS category FROM expenses 
-                        JOIN categories 
-                        ON expenses.category_id = categories.id
-                        WHERE expenses.user_id = :user_id
-                        AND expenses.date BETWEEN :start AND :end");
-$stmt->execute([
-    ":user_id" => $_SESSION["id"],
-    ":start" => $startDate,
-    ":end" => $endDate    
-]);
+$stmt = executeQuery(
+    $pdo,
+    "SELECT expenses.*, categories.name AS category FROM expenses 
+    JOIN categories 
+    ON expenses.category_id = categories.id
+    WHERE expenses.user_id = :user_id
+    AND expenses.date BETWEEN :start AND :end",
+    array(
+        ":user_id" => $_SESSION["id"],
+        ":start" => $startDate,
+        ":end" => $endDate 
+    )
+);
 $expenses = $stmt->fetchAll();
 
-$totalStmt = $pdo->prepare("SELECT SUM(amount) AS total FROM expenses 
-                            WHERE user_id = :user_id AND expenses.date BETWEEN :start AND :end");
-$totalStmt->execute([
-    ":user_id" => $_SESSION["id"],
-    ":start" => $startDate,
-    ":end" => $endDate
-]);
+$totalStmt = executeQuery(
+    $pdo,
+    "SELECT SUM(amount) AS total FROM expenses 
+    WHERE user_id = :user_id 
+    AND expenses.date BETWEEN :start AND :end",
+    array(
+        ":user_id" => $_SESSION["id"],
+        ":start" => $startDate,
+        ":end" => $endDate
+    )
+);
 $total = $totalStmt->fetch()["total"] ?? 0;
 
-$fetchCategoryStmt = $pdo->prepare("SELECT id, name FROM categories WHERE user_id = :user_id");
-$fetchCategoryStmt->execute([":user_id" => $_SESSION["id"]]);
+$fetchCategoryStmt = executeQuery($pdo, "SELECT id, name FROM categories WHERE user_id = :user_id", array(":user_id" => $_SESSION["id"]));
 $categories = $fetchCategoryStmt->fetchAll();
 
-$budgetStmt = $pdo->prepare("SELECT categories.id AS category_id, categories.name AS category_name,
-                budgets.amount AS budget_amount, budgets.month, COALESCE(SUM(expenses.amount), 0) AS spent
-                FROM budgets 
-                JOIN categories 
-                ON budgets.category_id = categories.id
-                LEFT JOIN expenses 
-                ON expenses.category_id = budgets.category_id
-                AND expenses.user_id = budgets.user_id AND
-                expenses.date >= budgets.month AND expenses.date <= LAST_DAY(budgets.month)
-                WHERE budgets.user_id = :user_id
-                AND budgets.month = :month
-                GROUP BY budgets.id, categories.id, categories.name, budgets.amount, budgets.month");
-$budgetStmt->execute([
-    ":user_id" => $_SESSION["id"],
-    ":month" => $startDate
-]);
+$budgetStmt = executeQuery(
+    $pdo,
+    "SELECT categories.id AS category_id, categories.name AS category_name,
+    budgets.amount AS budget_amount, budgets.month, COALESCE(SUM(expenses.amount), 0) AS spent
+    FROM budgets 
+    JOIN categories 
+    ON budgets.category_id = categories.id
+    LEFT JOIN expenses 
+    ON expenses.category_id = budgets.category_id
+    AND expenses.user_id = budgets.user_id 
+    AND expenses.date >= budgets.month AND expenses.date <= LAST_DAY(budgets.month)
+    WHERE budgets.user_id = :user_id
+    AND budgets.month = :month
+    GROUP BY budgets.id, categories.id, categories.name, budgets.amount, budgets.month",
+    array(
+        ":user_id" => $_SESSION["id"],
+        ":month" => $startDate 
+    )
+);
 $budgets = $budgetStmt->fetchAll();
-
 $selectedCategory = $_POST["category_id"] ?? null; 
 $flash = flash();
 ?><!DOCTYPE html>

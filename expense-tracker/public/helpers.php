@@ -21,6 +21,12 @@ function flash(): ?array
     return $flash;
 }
 
+function flashAndRedirect(string $type, string $message, string $path): void
+{
+    setFlash($type, $message);
+    redirect($path);
+}
+
 function isLoggedIn(): bool 
 {
     return (isset($_SESSION["id"]));
@@ -32,6 +38,14 @@ function requireLogin(): void
         redirect("/login.php"); 
     }
 }
+
+function requirePost(string $path): void
+{
+    if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+        redirect($path);
+    }
+}
+
 function formatDate(string $date): string
 {
     $date = new DateTime($date);
@@ -65,13 +79,11 @@ function getCategoryId(PDO $pdo, string $newCategory, ?string $categoryId, int $
         ]);
         $category = $checkStmt->fetch();
         if ($category === false) {
-            setFlash("error", "Invalid category selected");
-            redirect("/dashboard.php");
+            flashAndRedirect("error", "Invalid category selected", "/dashboard.php");
         }
         return (int) $category["id"];
     }  else {
-        setFlash("error", "Please select or add a category");
-        redirect("/dashboard.php");
+        flashAndRedirect("error", "Please select or add a category", "/dashboard.php");
         }
 }
 
@@ -82,22 +94,44 @@ function handleFileUpload(array $file,
 ): string
 {
     if ($file["error"] !== UPLOAD_ERR_OK) {
-        setFlash("error", "File upload failed");
-        redirect("/dashboard.php");
+        flashAndRedirect("error", "File upload failed", "/dashboard.php");
     }
     if ($file["size"] > $maxSize) {
-        setFlash("error", "File size exceeded max limit");
-        redirect("/dashboard.php");
-
+        flashAndRedirect("error", "File size exceeded max limit", "/dashboard.php");
     } 
     if (!in_array($file["type"], $allowedType)) {
-        setFlash("error", "File type not supported");
-        redirect("/dashboard.php");
+        flashAndRedirect("error", "File type not supported", "/dashboard.php");
     }
     $filename = $file["name"];
     if (!move_uploaded_file($file["tmp_name"], $uploads . $filename)) {
-        setFlash("error", "Failed to save file");
-        redirect("/dashboard.php");
+        flashAndRedirect("error", "Failed to save file", "/dashboard.php");
     }
     return $filename;
+}
+
+function fetchOrFail(PDO $pdo, string $sql, array $params, string $type, string $message, string $path): array
+{
+    $stmt = executeQuery($pdo, $sql, $params);
+    $result = $stmt->fetch();
+    if ($result === false) {
+        flashAndRedirect($type, $message, $path);
+    }
+    return $result;
+}
+
+function executeQuery(PDO $pdo, string $sql, array $params = []): PDOStatement
+{
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return $stmt;
+}
+
+function validateRequiredFields(array $fields, string $message, string $path): void
+{
+    foreach($fields as $value) {
+        if ($value === "" || $value === null) {
+            flashAndRedirect("error", $message, $path);
+        }
+    }
 }

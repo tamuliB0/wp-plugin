@@ -7,20 +7,20 @@ if (isLoggedIn()) {
     redirect("/dashboard.php");
 }
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $submittedUsername = trim($_POST["username"] ?? "");
-    $submittedPassword = trim($_POST["password"] ?? "");
+    $data = [
+        $submittedUsername = trim($_POST["username"] ?? ""),
+        $submittedPassword = trim($_POST["password"] ?? ""),
+    ];
+    validateRequiredFields($data, "All fields are required", "/login.php");
 
-    if ($submittedUsername === "" || $submittedPassword === "") {
-        setFlash("error", "All fields are required");
-        redirect("/login.php");
-    }
-    $checkStmt = $pdo->prepare("SELECT id, username, password FROM users WHERE username = :username");
-    $checkStmt->execute([":username" => $submittedUsername]);
+    $checkStmt = executeQuery(
+        $pdo,
+        "SELECT id, username, password FROM users WHERE username = :username",
+        array(":username" => $submittedUsername)
+    );
     $user = $checkStmt->fetch();
-
     if ($user === false || !password_verify($submittedPassword, $user["password"])) {
-        setFlash("error", "Invalid email or password");
-        redirect("/login.php");
+        flashAndRedirect("error", "Invalid email or password", "/login.php");
     }
     $_SESSION["id"] = $user["id"];
     $_SESSION["user"] = $user["username"];

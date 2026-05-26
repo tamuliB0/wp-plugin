@@ -1,8 +1,6 @@
 <?php
-session_start();
-require __DIR__ . "/helpers.php";
-require __DIR__ . "/db.php";
-requireLogin();
+require __DIR__ . "/bootstrap.php";
+
 $selectedCategory = $_GET["category"] ?? "";
 $startDate = $_GET["start_date"] ?? "";
 $endDate = $_GET["end_date"] ?? "";
@@ -42,8 +40,13 @@ $listStmt = $pdo->prepare($baseSql);
 $listStmt->execute($params);
 $expenses = $listStmt->fetchAll();
 
-$fetchCatergoryStmt = $pdo->prepare("SELECT id, name FROM categories WHERE user_id = :user_id");
-$fetchCatergoryStmt->execute([":user_id" => $_SESSION["id"]]);
+$fetchCatergoryStmt = executeQuery(
+    $pdo,
+    "SELECT id, name FROM categories WHERE user_id = :user_id",
+    array(
+       ":user_id" => $_SESSION["id"] 
+    )
+);
 $categories = $fetchCatergoryStmt->fetchAll();
 $flash = flash();
 ?>

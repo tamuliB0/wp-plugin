@@ -1,24 +1,26 @@
 <?php
-session_start();
-require __DIR__ . "/db.php";
-require __DIR__ . "/helpers.php";
+require __DIR__ . "/bootstrap.php";
 
-requireLogin();
 if (!isset($_GET["id"]) || !ctype_digit($_GET["id"])) {
     redirect("/dashboard.php");
 }
 $id = (int) $_GET["id"];
-$stmt = $pdo->prepare("SELECT * FROM expenses WHERE id = :id AND user_id = :user_id");
-$stmt->execute([
-    ":id" => $id,
-    ":user_id" => $_SESSION["id"]
-]);
-$expense = $stmt->fetch();
-if (!$expense) {
-    redirect("/dashboard.php");
-}
-$fetchCategoryStmt = $pdo->prepare("SELECT id, name FROM categories WHERE user_id = :user_id");
-$fetchCategoryStmt->execute([":user_id" => $_SESSION["id"]]);
+$expense = fetchOrFail(
+    $pdo,
+    "SELECT expenses.*, categories.name AS category 
+    FROM expenses
+    JOIN categories
+    ON expenses.category_id = categories.id 
+    WHERE expenses.id = :id AND expenses.user_id = :user_id",
+    array(
+        ":id" => $id,
+        ":user_id" => $_SESSION["id"]
+    ),
+    "error",
+    "",
+    "/dashboard.php"
+);
+$fetchCategoryStmt = executeQuery($pdo, "SELECT id, name FROM categories WHERE user_id = :user_id", array(":user_id" => $_SESSION["id"]));
 $categories = $fetchCategoryStmt->fetchAll();
 $flash = flash();
 ?>

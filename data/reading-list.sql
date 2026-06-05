@@ -6,13 +6,13 @@ CREATE TABLE IF NOT EXISTS `wp_reading_list` (
   `author` varchar(255) NOT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'to-read',
   `notes` text,
-  `created_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO `wp_reading_list` (`title`, `author`, `status`, `notes`, `created_at`) VALUES
-('Clean Code', 'Robert C. Martin', 'read', 'Solid fundamentals.', NOW()),
-('The Pragmatic Programmer', 'David Thomas', 'reading', NULL, NOW()),
-('PHP Objects, Patterns and Practice', 'Matt Zandstra', 'to-read', NULL, NOW()),
-('Professional WordPress', 'Brad Williams', 'to-read', 'Good reference.', NOW()),
-('WordPress Plugin Development', 'Yannick Lefebvre', 'to-read', NULL, NOW());
+('Clean Code', 'Robert C. Martin', 'read', 'Solid fundamentals.'),
+('The Pragmatic Programmer', 'David Thomas', 'reading', NULL),
+('PHP Objects, Patterns and Practice', 'Matt Zandstra', 'to-read', NULL),
+('Professional WordPress', 'Brad Williams', 'to-read', 'Good reference.'),
+('WordPress Plugin Development', 'Yannick Lefebvre', 'to-read', NULL);

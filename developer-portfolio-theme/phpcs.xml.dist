@@ -1,8 +1,0 @@
-<?xml version="1.0"?>
-<ruleset name="Developer Portfolio Theme">
-	<description>WordPress coding standards for the Developer Portfolio theme.</description>
-
-	<file>wp-content/themes/developer-portfolio/</file>
-
-	<rule ref="WordPress"/>
-</ruleset>

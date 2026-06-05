@@ -1,109 +1,94 @@
-# WordPress Plugin: Reading List Manager
+# Reading List Plugin
 
-Build a WordPress plugin that lets site owners manage a personal reading
-list. You will write all the plugin lifecycle code from scratch, register
-a custom database table, build admin pages, expose a shortcode for the
-frontend, and implement the Settings API. This is your first plugin --
-you own the full plugin lifecycle from activation to uninstall.
+### A WordPress plugin built from scratch that lets site owners manage and display a personal book collection.
 
-**Scaffolding level:** Each milestone tells you what to build and points
-you to the relevant WordPress Handbook pages. You find the implementation
-approach yourself. The linter (PHPCS + WPCS) teaches WordPress coding
-conventions by flagging what doesn't match.
+This plugin demonstrates a complete WordPress Plugin API lifecycle. It bypasses basic post-types by creating and querying a standalone, custom database table, providing custom administrative management screens, utilizing the official WordPress Settings API, and exposing clean frontend shortcodes.
 
-## Setup
+## 🚀 Features
 
-### 1. Start the environment and install WordPress
+- **Full Lifecycle:** Runs setup on activation (creates the database table) and cleans up fully on uninstall.
+- **Custom Database Table:** Stores book data in its own MySQL table using WordPress's built-in `$wpdb` object.
+- **Admin Page:** Adds a menu page in your WordPress dashboard where you can add, view, and delete books.
+- **Settings API:** Uses the native WordPress Settings API to save and validate plugin options securely.
+- **Frontend Shortcode:** Add `[reading_list]` to any page or post to display your book collection.
 
-```
-cd wordpress-plugin
+## 🛠️ Built With
+
+- **CMS:** WordPress 7.0
+- **Language:** PHP 8.3.6
+- **Local Environment:** DDEV 1.25.2
+
+## 📋 Prerequisites
+
+To run this application locally, your system must have Docker and DDEV installed. Follow the links below for easy, step-by-step setup guides depending on your operating system:
+
+1. **Docker CE / Container Engine**
+   - Linux Users: [Official Docker Installation Guide for Linux](https://docs.docker.com/engine/install/)
+   - Mac/Windows Users: [Docker Desktop Installation Guide](https://docs.docker.com/desktop/)
+2. **DDEV CLI**
+   - Follow the [Official DDEV Installation Script & Guide](https://ddev.readthedocs.io/en/stable/users/install/ddev-installation/) for all platforms.
+
+
+## ⚙️ Setup Instructions
+💡 Already have a local WordPress site running on DDEV? Skip to Step 2.
+
+### 1. Initialize a Local WordPress Site 
+If you do not have an active local environment running, you can spin up a clean, isolated WordPress instance using DDEV in an empty directory:
+```bash
+mkdir wp-plugin && cd wp-plugin
+ddev config --project-type=wordpress
 ddev start
+ddev wordpress download
 ```
 
-When finished:
+### 2. Clone the Plugin
 
-- [ ] `ddev start` works and WordPress loads in your browser
-- [ ] You can log into wp-admin (`admin` / `admin`)
-- [ ] Your plugin appears in wp-admin > Plugins (deactivated, ready to activate)
-- [ ] `ddev composer install` completes without errors
+Clone this repository into the plugins folder:
 
-### 2. Install PHPCS + WPCS
-
-```
-ddev composer install
+```bash
+cd wp-content/plugins
+git clone https://github.com/tamuliB0/reading-list-plugin.git
 ```
 
-This installs PHP CodeSniffer and the WordPress Coding Standards ruleset.
-The Composer installer plugin wires the standards together automatically.
+### 3. Activate the Plugin
 
-To run the linter:
+1. Run `ddev launch` to open your site in the browser.
+2. Log in to the WordPress dashboard at `/wp-admin`.
+3. Go to **Plugins**.
+4. Find **Reading List Plugin** and click **Activate**.
 
-```
-ddev exec vendor/bin/phpcs wp-content/plugins/reading-list/
-```
+> ✅ On activation, the plugin automatically creates its custom database table.
 
-**WPCS workflow rule (applies to every milestone):**
-- Run the linter before you open a PR. Fix all errors. Warnings are OK if you can explain them.
-- Paste the PHPCS summary (error count + top 3 violations) in your PR body.
-- If you don't know why something is flagged, read the WPCS rule link in the output, then ask.
 
-### 3. Activate the plugin
+## 💻 Usage
 
-The starter plugin file is already at
-`wp-content/plugins/reading-list/reading-list.php`. After `ddev start`,
-go to wp-admin > Plugins and activate "Reading List Manager".
+### 🔖 Add the Shortcode
 
-The starter file:
-- `reading-list.php` -- plugin header comment (required by WordPress to
-  recognise your plugin), empty activation/deactivation hooks
-
-## Test content
-
-A dummy SQL fixture is at `data/reading-list.sql`. Import it after
-activation:
+Paste this shortcode into any page or post to show your reading list on the frontend:
 
 ```
-ddev import-db --file=data/reading-list.sql --no-drop
+[reading_list]
 ```
 
-This fixture assumes DDEV's default `wp_` table prefix and creates
-`wp_reading_list` with five seed rows. In plugin code, always build the
-table name with `$wpdb->prefix . 'reading_list'` so the plugin works on
-non-default WordPress installs.
+### 📚 Manage Your Books
 
-## How to work
+Go to **Reading List** in your WordPress admin menu to:
+- Add a new book
+- View your full list
+- Delete a book
 
-Each milestone is a pull request. Branch from `main`, do the work, open
-a PR. Name your branch `milestone/N-short-name`, e.g.
-`milestone/1-plugin-skeleton`.
+### 🌐 Live Demo
 
-Your PR description should answer:
+👉 [View Live Site](http://www.bhardwaj.lovestoblog.com/wp/)
 
-- What did you build?
-- What was the hardest part?
-- What does the linter flag, and why?
-- Output self-audit:
-  - HTML text escaped with:
-  - Attribute values escaped with:
-  - URLs escaped with:
-  - WordPress helpers that echo directly:
-  - WordPress helpers that return values:
+---
 
-The reviewer will read your code and leave feedback. Address the feedback
-in the same branch, push again. When the reviewer approves, the milestone
-is done.
+### ⚙️ Plugin Settings
 
-**For your first PR only**, also include:
+Go to **Reading List > Settings** to configure plugin options using the built-in Settings panel.
 
-> **What I created from scratch:** (list every file you created that did
-> not exist before)
+### 🛠️ Useful Commands
 
-## Milestones
-
-Milestone specs are in `milestones/`:
-
-1. [Plugin Skeleton + Activation](milestones/m1-plugin-skeleton.md)
-2. [Shortcode: Display the Reading List](milestones/m2-shortcode.md)
-3. [Admin Page: Add a Book](milestones/m3-admin-add.md)
-4. [Edit, Delete, and Nonces](milestones/m4-edit-delete-nonces.md)
-5. [Settings API + Uninstall](milestones/m5-settings-uninstall.md)
+- `ddev start` — Starts your local WordPress site and database
+- `ddev stop` — Stops the project without losing data
+- `ddev describe` — Shows your local URLs and database login details

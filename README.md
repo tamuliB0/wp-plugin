@@ -41,7 +41,7 @@ ddev start
 ddev wp core download
 ddev wp core install --url='$DDEV_PRIMARY_URL' --title="YOUR-WEBSITE-TITLE" --admin_user=admin --admin_password=admin --admin_email=admin@example.com
 ```
-Your site will be at https://<your-ddev-project-name>.ddev.site. Admin login: admin / admin.
+Your site will be at `https://<your-ddev-project-name>.ddev.site`. Admin login: `admin` / `admin`.
 
 ### 2. Clone the Plugin
 

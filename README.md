@@ -2,21 +2,28 @@
 
 ### A WordPress plugin built from scratch that lets site owners manage and display a personal book collection.
 
-This plugin demonstrates a complete WordPress Plugin API lifecycle. It bypasses basic post-types by creating and querying a standalone, custom database table, providing custom administrative management screens, utilizing the official WordPress Settings API, and exposing clean frontend shortcodes.
+Reading List Manager manages a personal book collection through its own database table rather than a built-in post type. It covers a full plugin lifecycle: creating its schema on activation via `dbDelta()`, an admin CRUD screen protected by nonces and capability checks, a Settings API panel for pagination, a cached `[reading_list]` shortcode for the frontend, and a full teardown in `uninstall.php`.
+
+---
 
 ## 🚀 Features
 
-- **Full Lifecycle:** Runs setup on activation (creates the database table) and cleans up fully on uninstall.
-- **Custom Database Table:** Stores book data in its own MySQL table using WordPress's built-in `$wpdb` object.
-- **Admin Page:** Adds a menu page in your WordPress dashboard where you can add, view, and delete books.
-- **Settings API:** Uses the native WordPress Settings API to save and validate plugin options securely.
-- **Frontend Shortcode:** Add `[reading_list]` to any page or post to display your book collection.
+- **Full Plugin Lifecycle:** `register_activation_hook()` creates the `wp_reading_list` table via `dbDelta()`. `register_deactivation_hook()` is kept as a deliberate no-op, since deactivating the plugin shouldn't touch the data — only `uninstall.php` (gated by the `WP_UNINSTALL_PLUGIN` constant) drops the table and deletes the `reading_list_per_page` option.
+- **Custom Database Table:** Book data lives in its own table, queried through `$wpdb` using the `%i` identifier placeholder for the table name and `%s`/`%d` placeholders for values — no reliance on core post types.
+- **Admin CRUD Screen:** `add_menu_page()` / `add_submenu_page()` add a Reading List screen for adding, editing, and deleting books, with every action guarded by `check_admin_referer()` nonces and `current_user_can( 'manage_options' )`.
+- **Settings API:** A dedicated Settings page (`register_setting()`, `add_settings_section()`, `add_settings_field()`) lets admins configure books-per-page, validated through a custom `sanitize_callback` with `add_settings_error()` feedback.
+- **Frontend Shortcode:** `[reading_list]` renders a cached table of books via `shortcode_atts()` and `wp_cache_get()` / `wp_cache_set()`, with an optional `status` attribute to filter by reading status.
+- **Input Handling & Redirects:** Form input is sanitized with `sanitize_text_field()`, `sanitize_textarea_field()`, `absint()`, and `wp_unslash()`, with a redirect-after-post pattern via `wp_safe_redirect()` + `add_query_arg()` carrying a message flag back to the admin screen.
+
+---
 
 ## 🛠️ Built With
 
 - **CMS:** WordPress 7.0
 - **Language:** PHP 8.3.6
 - **Local Environment:** DDEV 1.25.2
+
+---
 
 ## 📋 Prerequisites
 
@@ -28,12 +35,12 @@ To run this application locally, your system must have Docker and DDEV installed
 2. **DDEV CLI**
    - Follow the [Official DDEV Installation Script & Guide](https://ddev.readthedocs.io/en/stable/users/install/ddev-installation/) for all platforms.
 
+---
 
 ## ⚙️ Setup Instructions
 💡 Already have a local WordPress site running on DDEV? Skip to Step 2.
 
-### 1. Initialize a Local WordPress Site 
-If you do not have an active local environment running, you can spin up a clean, isolated WordPress instance using DDEV in an empty directory:
+### 1. Initialize a Local WordPress Site
 ```bash
 mkdir wp-plugin && cd wp-plugin
 ddev config --project-type=wordpress
@@ -44,8 +51,6 @@ ddev wp core install --url='$DDEV_PRIMARY_URL' --title="YOUR-WEBSITE-TITLE" --ad
 Your site will be at `https://<your-ddev-project-name>.ddev.site`. Admin login: `admin` / `admin`.
 
 ### 2. Clone the Plugin
-
-Clone this repository into the plugins folder:
 
 ```bash
 cd wp-content/plugins
@@ -61,6 +66,7 @@ git clone https://github.com/tamuliB0/reading-list-plugin.git
 
 > ✅ On activation, the plugin automatically creates its custom database table.
 
+---
 
 ## 💻 Usage
 
@@ -74,10 +80,7 @@ Paste this shortcode into any page or post to show your reading list on the fron
 
 ### 📚 Manage Your Books
 
-Go to **Reading List** in your WordPress admin menu to:
-- Add a new book
-- View your full list
-- Delete a book
+Go to **Reading List** in your WordPress admin menu to add, view, edit, or delete a book.
 
 ### 🌐 Live Demo
 
@@ -87,7 +90,7 @@ Go to **Reading List** in your WordPress admin menu to:
 
 ### ⚙️ Plugin Settings
 
-Go to **Reading List > Settings** to configure plugin options using the built-in Settings panel.
+Go to **Reading List > Settings** to configure books-per-page using the built-in Settings panel.
 
 ### 🛠️ Useful Commands
 
